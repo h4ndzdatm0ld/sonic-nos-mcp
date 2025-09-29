@@ -1,0 +1,41 @@
+# Basic SONiC Analysis Test Cases
+# Tests fundamental SONiC tech support file analysis capabilities
+
+test_cases:
+  # - id: "sonic-basic-001"
+  #   category: "system_health"
+  #   query: |
+  #     Extract the SONiC tech support file and provide a comprehensive system health summary including:
+  #     1. SONiC version, OS, kernel version, and platform information
+  #     2. System uptime and boot status
+  #     3. Docker container status - which containers are running and their uptime
+  #     4. I am not interested in any other information other than the above.
+  #   expected: |
+  #     Complete system health report with SONiC version, container status, uptime information,
+  #     and overall health assessment based on container states and system stability.
+  #   expected_tools: ["extract_tech_support_file", "read_tech_support_file"]
+  #   expected_patterns: ["SONiC version", "container status", "uptime", "health assessment"]
+  #   context:
+  #     analysis_type: "targeted_system_health"
+  #     focus_areas: ["version_info", "container_health", "system_uptime"]
+  #     key_files: ["dump/version", "dump/docker.ps", "dump/uptime"]
+
+  - id: "sonic-basic-002"
+    category: "file_navigation"
+    query: "List all JSON configuration files in the tech support bundle. Do not show me anything else."
+    expected: "List of JSON files with paths and descriptions"
+    expected_tools: ["list_tech_support_files_tool"]
+    expected_patterns: ["json", "config", "database"]
+    context:
+      file_types: ["json"]
+      search_patterns: ["*.json"]
+
+  # - id: "sonic-basic-003"
+  #   category: "content_inspection"
+  #   query: "Show me the content of the STATE_DB.json file from the tech support data"
+  #   expected: "Content of STATE_DB.json with interface and system state information"
+  #   expected_tools: ["get_tech_support_file_content_tool"]
+  #   expected_patterns: ["STATE_DB", "interface", "port"]
+  #   context:
+  #     target_file: "STATE_DB.json"
+  #     expected_content: "database state"

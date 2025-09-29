@@ -1,0 +1,1057 @@
+# SONiC Tech Support Guide Resource
+resource_id: "sonic://tech-support-guide"
+title: "SONiC Tech Support Analysis Guide"
+description: "Comprehensive guide for analyzing SONiC network device tech support files"
+version: "1.0.0"
+author: "SONiC"
+
+# Resource content in multi-line YAML format for easy reading/editing
+content: |
+  # SONiC Tech Support File Analysis Guide
+
+  ## Overview
+
+  SONiC Tech Support File Structure & Analysis Guide
+
+  Overview
+
+  Complete educational guide to understanding SONiC tech support files, their structure, contents, and analysis methods for network troubleshooting. This guide explains what SONiC diagnostic bundles contain, how they are organized, and where to find specific information when investigating platform issues.
+
+  What is a SONiC Tech Support File
+
+  SONiC tech support files are comprehensive diagnostic bundles that capture the complete state of a SONiC network device at a specific point in time. These files contain:
+
+  * System configuration from all databases
+  * Operational state and health information
+  * Hardware sensor readings and status data
+  * Log files from all containers and services
+  * Network state including routing and switching tables
+  * Process and system resource utilization
+
+  When Tech Support Files are Generated
+
+  There are various reasons to collect tech support files. Typically, the below are applicable:
+
+  * During network outages or performance issues
+  * Before and after maintenance activities
+  * As part of routine health monitoring
+  * When requested by support teams for analysis
+
+  File Naming Convention
+
+  sonic_dump_<hostname>_<timestamp>/
+
+  Example: sonic_dump_arl7-ar-acc-sw-7-4013_20250812_182453/
+
+  Collection Process
+
+  The generate_dump script is a built-in SONiC utility that creates comprehensive diagnostic bundles. This script is typically located at /usr/local/bin/generate_dump on SONiC devices and can be executed via the show techsupport command (recommended) or directly.
+
+  The generate_dump script automatically collects data from:
+
+  * Redis databases containing system state
+  * Container logs from all SONiC services
+  * Hardware monitoring systems
+  * Linux kernel interfaces
+  * Network command outputs
+
+
+  1. Top-Level Directory Structure
+
+  sonic_dump_<hostname>_<timestamp>/
+  ├── generate_dump           # Script used to create the dump (78KB, executable)
+  ├── dump/                  # 156 files - System state snapshots & command outputs
+  ├── log/                   # 107 files - Compressed log files (.gz format)
+  ├── etc/                   # 159 files - System configuration files
+  ├── proc/                  # 34 files - Linux proc filesystem dump
+  ├── proc_stats/            # 3 files - Process statistics
+  └── warmboot/              # 3 files - Warm boot related information
+
+  Directory Contents
+
+  Content size was evaluated against multiple tech support outputs
+
+  * dump/ - 156 files - System state snapshots & command outputs
+  * log/ - 107 files - Compressed log files (.gz format)
+  * etc/ - 159 directories/files - System configuration data
+  * proc/ - 34 files - Linux kernel/system information
+  * proc_stats/ - 3 files - Process statistics
+  * warmboot/ - 3 files - Warm boot related information
+
+
+  2. SONiC Database Files - Core System Information
+
+  SONiC uses Redis databases to store different types of system information. These databases are exported as JSON files in tech support bundles and contain the most critical information for troubleshooting.
+
+  A. CONFIG_DB.json - System Configuration
+
+  Content: System configuration tables
+
+  Key Tables and Information:
+
+
+  * DEVICE_METADATA|localhost: Hostname, platform type, MAC address, hardware SKU
+  * PORT|EthernetX: Interface configurations including speed, FEC, MTU, admin status
+  * VLAN|VlanX: VLAN definitions and VLAN IDs
+  * VLAN_MEMBER|VlanX|EthernetY: VLAN membership and tagging mode
+  * BREAKOUT_CFG|EthernetX: Port breakout configurations (1x1G, 1x25G, etc.)
+  * FEATURE|service_name: Service enable/disable states for all SONiC features
+  * STP|GLOBAL, MSTP_INSTANCE: Spanning Tree Protocol configurations
+  * POE_PORT|EthernetX: Power over Ethernet port configurations
+  * USER_NAME|username: Local user account configurations
+  * STATIC_ROUTE: Static routing table entries
+  * NTP_SERVER: NTP server configurations
+
+  B. STATE_DB.json - Operational State and Health
+
+  Content: Current operational state and system health information
+
+  Key Tables and Information:
+
+
+  * SYSTEM_HEALTH_INFO: Overall system health summary with component status
+  * PORT_TABLE|EthernetX: Interface operational states, speeds, link status
+  * FDB_TABLE|VlanX:MAC: MAC address learning table with port associations
+  * PSU_INFO|PSU X: Power supply operational status and health
+  * FAN_INFO|FAN-X: Fan operational status, speeds, and health indicators
+  * TEMPERATURE_INFO|sensor_name: Temperature readings from all monitored sensors
+  * DOCKER_STATS|container_id: Container resource utilization (CPU, memory)
+  * PROCESS_STATS|pid: Process CPU and memory usage at collection time
+  * ALL_SERVICE_STATUS|service: Health status of all SONiC services
+  * TRANSCEIVER_STATUS|EthernetX: Optical transceiver status and errors
+  * VLAN_TABLE|VlanX: VLAN operational state
+  * ROUTE_TABLE: Routing table operational status
+
+  C. ASIC_DB.json - Hardware Abstraction Layer
+
+  Content: SAI (Switch Abstraction Interface) objects and hardware state
+
+  Contains:
+
+  * SAI object definitions and their current states
+  * Port configurations at the hardware level
+  * VLAN mappings programmed into hardware
+  * Routing table entries in the ASIC
+  * Hardware counters and low-level statistics
+  * Bridge and switching table entries in hardware
+
+  Safe Analysis Approach:
+
+  # Use targeted searches only
+  grep "SAI_PORT" ASIC_DB.json | head -20
+  grep "SAI_STP_PORT_STATE" ASIC_DB.json | head -10
+
+  D. COUNTERS_DB.json Files - Interface Statistics
+
+  Content: Interface and system counters
+
+  File Variants:
+
+  * COUNTERS_DB.json: Current counter snapshot
+  * COUNTERS_DB_1.json: Previous snapshot for comparison
+  * COUNTERS_DB_2.json: Additional time-based snapshot
+
+  Contains:
+
+  * Interface packet and byte counters
+  * Error counters (drops, discards, errors)
+  * Queue utilization statistics
+  * Buffer usage statistics
+  * Hardware-specific performance counters
+
+  # Search for specific interface counters
+  grep "Ethernet16" COUNTERS_DB.json | head -5
+
+  # Look for error conditions
+  grep -E "(error|drop|discard)" COUNTERS_DB.json | head -10
+
+  E. FLEX_COUNTER_DB.json - Counter Configurations
+
+  Content: Flexible counter system configurations
+
+  Contains:
+
+  * Counter polling intervals for different counter types
+  * Enabled/disabled counter categories (PORT, QUEUE, BUFFER, etc.)
+  * Counter collection policies and settings
+
+  F. APPL_DB.json - Application Layer State
+
+  Content: Application layer database information
+
+  Contains:
+
+  * Route table entries from routing protocols
+  * Neighbor table entries (ARP/ND)
+  * Application-specific configurations and state
+  * Port channel and LAG information
+
+  4. System Information and Network State Files
+
+  A. Network State Files
+
+  interface.status
+
+  Content: Formatted table of all interface operational states
+
+  Information provided:
+
+  * Interface names and physical lane assignments
+  * Current speed and MTU configuration
+  * FEC (Forward Error Correction) status
+  * Administrative status (up/down/disabled)
+  * Operational status (up/down)
+  * VLAN assignment (trunk/routed/access)
+  * Interface type (RJ45, SFP, QSFP, etc.)
+
+  bridge.fdb
+
+  Content: Kernel bridge forwarding database (MAC address table)
+
+  Information provided:
+
+  * Learned MAC addresses from network traffic
+  * VLAN associations for each MAC address
+  * Port where each MAC was learned
+  * Entry type (dynamic learning vs static configuration)
+
+  bridge.vlan
+
+  Content: VLAN membership information from kernel bridge perspective
+
+  vlan.summary
+
+  Content: Summary of VLAN configuration and membership
+
+  B. Hardware Information Files
+
+  sensors
+
+  Content: Current temperature sensor readings from all monitored components
+  Use for: Thermal monitoring and overheating troubleshooting
+
+  fan
+
+  Content: Fan operational status including speed and health indicators
+  Use for: Cooling system monitoring and failure detection
+
+  temperature
+
+  Content: Detailed temperature readings from all thermal sensors
+  Use for: Thermal analysis and cooling system effectiveness
+
+  syseeprom
+
+  Content: System EEPROM information including serial numbers, part numbers, and manufacturing data
+  Use for: Hardware identification and inventory management
+
+  C. System Resource and Process Files
+
+  top
+
+  Content: Process list with CPU and memory usage snapshot at collection time
+  Use for: Performance analysis and resource utilization troubleshooting
+
+  ps.aux / ps.extended
+
+  Content: Complete process listings with detailed resource information
+  Use for: Process analysis and service troubleshooting
+
+  free
+
+  Content: System memory usage statistics
+  Use for: Memory utilization analysis
+
+  vmstat, vmstat.m, vmstat.s
+
+  Content: Virtual memory and system performance statistics
+  Use for: System performance analysis and bottleneck identification
+
+  D. Service and Container Information
+
+  services.summary
+
+  Content: Systemd service states and health status
+  Use for: Service health monitoring and failure detection
+
+  docker.ps
+
+  Content: Docker container status and basic information
+  Use for: Container health and operational state verification
+
+  docker.stats
+
+  Content: Container resource utilization (CPU, memory, I/O)
+  Use for: Container performance analysis
+
+  version
+
+  Content: SONiC version information and build details
+  Use for: Version verification and compatibility analysis
+
+
+  E. Hardware and Low-Level Information
+
+  saidump
+
+  Content: Complete SAI (Switch Abstraction Interface) object dump
+  Use for: Low-level hardware state analysis and ASIC troubleshooting
+
+
+  platform.summary
+
+  Content: Platform-specific hardware information and capabilities
+  Use for: Hardware platform identification and feature verification
+
+
+  lspci / lsusb
+
+  Content: PCI and USB device information
+  Use for: Hardware component identification
+
+
+  hdparm / ssdhealth
+
+  Content: Storage device health and performance information
+  Use for: Storage system troubleshooting
+
+
+  3. Log Files - Event Timeline and Service Information
+
+  All log files in the /log directory are compressed (.gz format) and contain timestamped events from SONiC services and system components.
+
+
+  A. Critical Log Files for Network Troubleshooting
+
+  sairedis.rec.gz - Hardware API Calls
+
+  Priority: CRITICAL for hardware-related issues
+  Content: SAI (Switch Abstraction Interface) API calls with microsecond timing
+
+  What it contains:
+
+  * Low-level hardware API calls to the ASIC
+  * Port state change commands sent to hardware
+  * Hardware programming sequences and timing
+  * ASIC configuration updates and responses
+
+  Use for troubleshooting:
+
+  * Hardware-level port issues
+  * ASIC programming failures
+  * Low-level switching problems
+  * Hardware abstraction layer debugging
+
+  Analysis commands:
+
+  # View recent hardware API calls
+  gunzip sairedis.rec.gz | tail -20
+
+  # Search for port-related hardware calls
+  gunzip sairedis.rec.gz | grep -E "(PORT|STP)" | head -10
+
+  swss.rec.gz - Switch State Service Changes
+
+  Priority: CRITICAL for network state issues
+  Content: Database state changes from Switch State Service
+
+  What it contains:
+
+  * Interface state transitions (up/down)
+  * VLAN membership changes
+  * Spanning Tree Protocol state changes
+  * MAC address learning and aging events
+  * Route table updates
+  * Network configuration changes
+
+  Use for troubleshooting:
+
+  * Interface connectivity problems
+  * VLAN configuration issues
+  * Spanning tree convergence problems
+  * MAC learning failures
+  * Network state inconsistencies
+
+  Analysis commands:
+
+  # View recent state changes
+  gunzip swss.rec.gz | tail -30
+
+  # Search for specific interface events
+  gunzip swss.rec.gz | grep "Ethernet16" | head -10
+
+  # Find spanning tree events
+  gunzip swss.rec.gz | grep -E "(STP|BLOCK|LEARN|FORWARD)" | head -10
+
+  syslog.gz - System-Wide Events
+
+  Priority: HIGH for overall system events
+  Content: System-wide log messages from all services and components
+
+  What it contains:
+
+  * System startup and shutdown events
+  * Service start, stop, and restart events
+  * Hardware alerts and warnings
+  * Critical error messages
+  * Network connectivity events
+  * Authentication and authorization events
+
+  Use for troubleshooting:
+
+  * System stability issues
+  * Service failures and restarts
+  * Hardware alerts and failures
+  * Timeline reconstruction for incidents
+  * Correlation of events across services
+
+  Analysis commands:
+
+
+  # View recent system events
+  gunzip syslog.gz | tail -50
+
+  # Search for errors and critical events
+  gunzip syslog.gz | grep -E "(ERROR|CRITICAL|FAIL)" | head -20
+
+  # Time-specific analysis
+  gunzip syslog.gz | grep "2025-08-12 18:2[0-5]" | head -30
+
+  B. Service-Specific Log Files
+
+  BGP and Routing Service Logs
+
+  * bgpd.log.gz: BGP daemon events and neighbor state changes
+  * zebra.log.gz: Zebra routing daemon logs and route updates
+
+  System Service Logs
+
+  * auth.log.gz: User authentication events and SSH connections
+  * audit.log.gz: System security audit events
+  * cron.log.gz: Scheduled task execution and results
+  * gnmi.log.gz: gNMI telemetry service events
+
+  C. Telemetry and Monitoring Logs
+
+  Telemetry Log Pattern
+
+  Files: telemetry.log.gz, telemetry.log.1.gz through telemetry.log.68.gz
+  Content: Network device telemetry streams and monitoring data
+
+  System Activity Reports
+
+  Files: sar03.gz through sar12.gz (hourly), sa04.gz through sa12.gz (daily)
+  Content: System performance statistics including CPU, memory, I/O, and network utilization over time
+
+  B. Telemetry Logs
+
+  # Numbered telemetry logs (telemetry.log.1.gz through telemetry.log.68.gz)
+  telemetry.log.gz     # Current telemetry
+  telemetry.log.1.gz   # Previous rotation
+  telemetry.log.N.gz   # Historical telemetry data
+
+  C. System Activity Reports (sar files)
+
+  # System Activity Reporter logs
+  sar03.gz through sar12.gz  # Hourly system statistics
+  sa04.gz through sa12.gz    # Daily system activity
+
+  # File pattern
+  sa##.gz     # System activity for specific hours
+  sar##.gz    # System activity reports
+
+  D. Misc Logs
+
+  btmp.gz             # Failed login attempts
+  wtmp.gz             # Login/logout records
+  user.log.gz         # User-related messages
+  dpkg.log.gz         # Package management
+
+
+  4. /etc Directory (159 files) - Configuration Analysis
+
+  A. Directory Structure:
+
+  # Major configuration directories
+  /apparmor/          # AppArmor security profiles
+  /apparmor.d/        # AppArmor application profiles (12 items)
+  /apt/               # Package manager configuration (9 items)
+  /audit/             # Audit system configuration (8 items)
+  /bash_completion.d/ # Bash completion scripts (29 items)
+  /cron.d/            # Cron job definitions
+  /dbus-1/            # D-Bus message bus configuration
+  /docker/            # Docker daemon configuration
+  /NetworkManager/    # Network manager configuration
+  /systemd/           # Systemd service definitions
+  /udev/              # Device manager rules
+
+
+
+  B. Key Configuration Files:
+
+  # System configuration
+  bash.bashrc         # System-wide bash configuration
+  environment         # Environment variables
+  hostname            # System hostname
+  hosts               # Host name resolution
+  passwd              # User account information
+  shadow              # Encrypted passwords
+  group               # User group definitions
+
+  # Network configuration
+  interfaces          # Network interface configuration
+  resolv.conf         # DNS resolver configuration
+  nsswitch.conf       # Name service switch configuration
+
+
+  5. /proc Directory (34 files) - Kernel State
+
+  A. Process Information:
+
+  # Process and system state files
+  loadavg             # System load averages
+  meminfo             # Memory usage details
+  cpuinfo             # CPU information
+  stat                # System statistics
+  uptime              # System uptime
+  version             # Kernel version
+
+  # Files requiring careful handling
+  kallsyms            # Kernel symbol table
+  kcore               # Kernel memory image
+
+  B. Network Proc Files:
+
+  # Network-related proc subdirectories
+  /proc/net/bonding/   # Link aggregation information
+  /proc/net/vlan/      # VLAN statistics and configuration
+  /proc/net/netfilter/ # Netfilter/iptables statistics
+  /proc/net/stat/      # Network statistics
+
+  C. Critical Proc Files:
+
+  # System health indicators
+  diskstats           # Disk I/O statistics
+  interrupts          # Hardware interrupt counters
+  iomem               # I/O memory mapping
+  modules             # Loaded kernel modules
+  mounts              # Mounted filesystems
+
+
+  7. Container-Specific Information
+
+  A. /dump/container_dumps/ Structure:
+
+  # Container-specific data (subdirectories)
+  database/           # Database container dumps
+  teamd/             # Link aggregation (LACP) container
+  snmp/              # SNMP service container
+  gnmi/              # gNMI telemetry container
+  lldp/              # LLDP service container
+  eventd/            # Event management container
+  syncd/             # Synchronization daemon container
+  pmon/              # Platform monitoring container
+  swss/              # Switch State Service container
+  bgp/               # BGP routing container
+
+  B. /dump/sdkdump/ Structure:
+
+  # SDK-specific dumps (30 subdirectories)
+  # Hardware abstraction layer information
+  # ASIC-specific configuration and state
+  # Low-level hardware diagnostics
+
+
+  8. Log File Patterns & Rotation
+
+  A. Log Rotation Patterns:
+
+  # Common rotation patterns observed
+  service.log.gz          # Current log
+  service.log.1.gz        # Previous rotation
+  service.log.N.gz        # Older rotations
+
+  # Examples
+  audit.log.gz + audit.log.1.gz
+  swss.rec.gz + swss.rec.1.gz
+  telemetry.log.gz + telemetry.log.1.gz through telemetry.log.68.gz
+
+  B. Time-based Log Analysis:
+
+  # Telemetry logs are time-sequenced
+  telemetry.log.68.gz     # Oldest available
+  telemetry.log.1.gz      # Most recent rotation
+  telemetry.log.gz        # Current active log
+
+  # Analysis approach
+  for i in {1..10}; do
+    echo "=== telemetry.log.$i.gz ==="
+    gunzip -c telemetry.log.$i.gz | head -5
+  done
+
+
+
+
+  9. File Investigation Workflow
+
+  Step 1: Understand the Scope
+
+  # Get overall structure
+  ls -la                                    # Top-level overview
+  find . -type d | wc -l                    # Total directories
+  find . -type f | wc -l                    # Total files
+  du -sh */                                 # Size by directory
+
+  # Identify key files
+  ls -la dump/ | head -20                   # Core dump files
+  ls -la log/ | head -10                    # Log files
+  du -sh dump/*.json | sort -hr             # Database files by size
+
+
+
+  Step 2: Examine Database Files
+
+  # Start with configuration
+  head -50 dump/CONFIG_DB.json | jq '.'     # Configuration structure
+  grep -E "VLAN|PORT|MSTP" dump/CONFIG_DB.json | head -20
+
+  # Check operational state
+  head -100 dump/STATE_DB.json | jq '.'     # Operational state
+  head -50 dump/ASIC_DB.json | jq '.'       # Hardware state (careful - large!)
+
+
+
+  Step 3: Analyze System State
+
+  # Interface and network state
+  cat dump/interface.status | column -t     # Interface status table
+  cat dump/bridge.fdb | head -20            # MAC learning evidence
+  cat dump/version                          # SONiC version information
+
+  # System resources
+  cat dump/top | head -20                   # Process information
+  cat dump/free                            # Memory usage
+  cat proc/loadavg                         # Load average
+
+
+
+  Step 4: Timeline Analysis
+
+  # Check critical logs (largest first)
+  ls -la log/*.gz | sort -k5 -nr | head -10
+
+  # Examine most critical logs
+  gunzip -c log/swss.rec.gz | head -20      # SWSS state changes
+  gunzip -c log/sairedis.rec.gz | head -20  # SAI API calls
+  gunzip -c log/syslog.gz | head -20        # System messages (if available)
+
+
+
+  10. Directory Deep-Dive Analysis
+
+  A. /dump Directory Breakdown (156 files)
+
+  Database Files (31 JSON files):
+
+  # Core databases
+  CONFIG_DB.json      - System configuration
+  STATE_DB.json       - Operational state
+  ASIC_DB.json        - Hardware abstraction layer
+  APPL_DB.json        - Application layer
+  COUNTERS_DB*.json   - Statistics and counters
+
+  # Protocol-specific
+  bgp.*.json          - BGP routing information
+  evpn.*.json         - EVPN configuration and state
+  frr.*.json          - FRRouting daemon state
+
+
+
+  Command Output Files (~125 files):
+
+  # Network commands
+  interface.status, interface.counters_*, interface.xcvrs.*
+  bridge.fdb, bridge.vlan
+  ip.route, ip.addr, ip.neigh, ip.link
+  lldpctl, lldp.statistics
+
+  # System commands
+  ps.aux, ps.extended, top, free, vmstat*
+  docker.ps, docker.stats
+  systemd.analyze.*
+  sensors, temperature, fan
+
+  # BGP/Routing
+  bgp.neighbors, bgp.summary, bgp.table
+  frr.*, zebra.*
+
+  # Hardware
+  lspci, lsusb, hdparm, ssdhealth
+  platform.summary, machine.conf
+
+
+
+  B. /log Directory Breakdown (107 files)
+
+  Critical Logs for RCA:
+
+  # Event logs (compressed)
+  sairedis.rec.gz     # SAI API calls - MOST CRITICAL for hardware issues
+  swss.rec.gz         # SWSS database changes - CRITICAL for state issues
+  syslog.gz           # System messages - CRITICAL for overall timeline
+
+  # Service logs
+  bgpd.log.gz         # BGP daemon
+  zebra.log.gz        # Zebra routing
+  gnmi.log.gz         # gNMI telemetry
+
+
+
+  System Logs:
+
+  # System activity
+  audit.log*.gz       # Security events
+  auth.log.gz         # Authentication events
+  cron.log.gz         # Scheduled task execution
+  user.log.gz         # User activities
+  kern.log.gz         # Kernel messages
+
+  # System statistics (sar/sa files)
+  sar03.gz - sar12.gz # System Activity Reporter (hourly)
+  sa04.gz - sa12.gz   # System Activity (daily summaries)
+
+
+
+  Telemetry Logs (68 files):
+
+  # Time-sequenced telemetry
+  telemetry.log.gz           # Current
+  telemetry.log.1.gz         # Most recent rotation
+  telemetry.log.2.gz         # Previous rotation
+  ...
+  telemetry.log.68.gz        # Oldest available
+
+  # Analysis pattern
+  ls -la log/telemetry.log*.gz | wc -l      # Count telemetry files
+  du -sh log/telemetry.log*.gz | head -10   # Size analysis
+
+
+
+  C. /proc Directory Breakdown (34 files)
+
+  System Information:
+
+  # Core system files
+  loadavg             # Load average (critical for performance issues)
+  meminfo             # Detailed memory information
+  cpuinfo             # CPU specifications
+  stat                # System statistics
+  uptime              # System uptime
+  version             # Kernel version
+
+  # Process information
+  buddyinfo           # Memory fragmentation
+  diskstats           # Disk I/O statistics
+  interrupts          # Hardware interrupts
+  modules             # Loaded kernel modules
+
+  Network Proc Information:
+
+  # Network subdirectories
+  net/bonding/        # Link aggregation status
+  net/vlan/           # VLAN statistics
+  net/netfilter/      # Firewall statistics
+  net/stat/           # Network protocol statistics
+
+
+  11. Investigation Command Patterns
+
+  A. File Discovery Commands:
+
+  # Understand the tech support structure
+  find . -name "*.json" | head -20                    # All JSON databases
+  find . -name "*.gz" | wc -l                         # Total compressed logs
+  find . -type f -size +1M | head -10                 # Large files requiring care
+  find . -name "*interface*" -o -name "*bridge*"      # Network-related files
+  find . -name "*bgp*" -o -name "*route*"             # Routing files
+
+
+
+  B. Size-Aware Analysis:
+
+  # Check file sizes before analysis
+  ls -lah dump/ | sort -k5 -hr | head -15             # Dump files by size
+  ls -lah log/ | sort -k5 -hr | head -15              # Log files by size
+  du -sh */ | sort -hr                                # Directory sizes
+
+  # Safe file analysis
+  wc -l dump/CONFIG_DB.json                           # Line count check
+  head -100 dump/ASIC_DB.json | grep "pattern"        # Limited head analysis
+
+
+
+  C. Cross-Directory Correlation:
+
+  # Compare information across directories
+  echo "Interface from CONFIG:"; grep "Ethernet16" dump/CONFIG_DB.json | head -3
+  echo "Interface from STATE:"; grep "Ethernet16" dump/STATE_DB.json | head -3
+  echo "Interface from proc:"; grep -r "Ethernet16" proc/ 2>/dev/null | head -3
+
+
+
+
+  12. Common File Access Patterns
+
+  A. JSON File Analysis:
+
+  # Large JSON files (>500KB)
+  grep "specific_key" ASIC_DB.json | head -20         # Pattern search first
+  head -1000 ASIC_DB.json | grep "pattern"           # Limited head + search
+  jq 'keys' CONFIG_DB.json | head -20                # Structure analysis
+
+  # Medium JSON files (100KB-500KB)
+  jq '.' CONFIG_DB.json | head -100                  # Full structure review
+  cat STATE_DB.json | jq '.PORT_TABLE' | head -50   # Specific table analysis
+
+
+
+  B. Compressed Log Analysis:
+
+  # Always check file size first
+  ls -lah log/swss.rec.gz                            # Check compressed size
+  gunzip -l log/swss.rec.gz                          # Check uncompressed size
+
+  # Time-based analysis
+  gunzip -c log/swss.rec.gz | grep "2025-08-12" | head -20
+  gunzip log/syslog.gz | tail -100 | head -50          # Recent events
+
+  # Pattern search in compressed files
+  gunzip -c log/sairedis.rec.gz | grep -E "(DOWN|BLOCK)" | head -10
+
+
+
+  C. Directory Traversal:
+
+  # Systematic directory exploration
+  for dir in dump log etc proc; do
+    echo "=== $dir directory ==="
+    ls -la $dir | wc -l
+    ls -la $dir | head -5
+    echo
+  done
+
+  # Find specific file types
+  find . -name "*.json" -exec du -sh {} \; | sort -hr | head -10
+  find . -name "*.gz" -exec ls -lah {} \; | sort -k5 -hr | head -10
+
+
+
+
+  13. Pro Tips for Structure Analysis
+
+  Always Check First:
+
+  * File sizes before opening large JSON files
+  * Compression ratio for log files (gunzip -l filename.gz)
+  * Directory structure with tree or find commands
+  * File modification times to understand collection timing
+
+  Safe Analysis Approach:
+
+  1. Start with small files (version, interface.status, bridge.fdb)
+  2. Use head/tail on medium files for structure understanding
+  3. Use targeted grep on large files with specific patterns
+  4. Cross-reference findings across multiple file types
+
+  Performance Guidelines:
+
+  * JSON files >500KB: Use grep, avoid full loading
+  * Compressed logs >100KB: Use gunzip -c with targeted patterns
+  * Always use head -N to limit output initially
+  * Build up complexity from simple to complex searches
+
+
+
+  14. Troubleshooting Quick Reference
+
+  Problem Type to File Mapping
+
+  Interface Connectivity Issues
+
+  Primary Files:
+
+
+  * interface.status: Administrative and operational states
+  * STATE_DB.json: PORT_TABLE entries for detailed operational information
+  * CONFIG_DB.json: PORT and BREAKOUT_CFG tables for intended configuration
+  * COUNTERS_DB.json: Interface error counters and statistics
+
+  Analysis Sequence:
+
+
+  1. Check interface.status for admin/operational state mismatch
+  2. Verify intended configuration in CONFIG_DB.json PORT tables
+  3. Check operational details in STATE_DB.json PORT_TABLE
+  4. Examine error counters in COUNTERS_DB.json for drops/errors
+  5. Review recent state changes in log/swss.rec.gz
+
+  MAC Learning Problems
+
+  Primary Files:
+
+
+  * bridge.fdb: Current kernel MAC learning table
+  * STATE_DB.json: FDB_TABLE entries showing learned MACs
+  * CONFIG_DB.json: VLAN_MEMBER configurations for port assignments
+  * log/swss.rec.gz: MAC learning and aging events
+
+  Analysis Sequence:
+
+
+  1. Check current MAC address table in bridge.fdb
+  2. Verify VLAN membership configuration in CONFIG_DB.json
+  3. Review database FDB entries in STATE_DB.json
+  4. Examine MAC learning events in log/swss.rec.gz
+
+  Hardware Issues
+
+  Primary Files:
+
+
+  * STATE_DB.json: SYSTEM_HEALTH_INFO, PSU_INFO, FAN_INFO, TEMPERATURE_INFO tables
+  * sensors: Current hardware sensor readings
+  * log/syslog.gz: Hardware alerts and error messages
+  * log/sairedis.rec.gz: Low-level hardware API calls
+
+  Analysis Sequence:
+
+
+  1. Check SYSTEM_HEALTH_INFO table in STATE_DB.json for overall status
+  2. Review individual hardware component status (PSU, fans, temperature)
+  3. Examine current sensor readings in sensors file
+  4. Search for hardware-related events in system logs
+
+  Performance Issues
+
+  Primary Files:
+
+
+  * top: Process CPU and memory usage snapshot
+  * STATE_DB.json: DOCKER_STATS and PROCESS_STATS tables
+  * free: System memory utilization
+  * vmstat, vmstat.m, vmstat.s: System performance statistics
+
+  Analysis Sequence:
+
+
+  1. Check top output for high CPU/memory consuming processes
+  2. Review container resource usage in STATE_DB.json DOCKER_STATS
+  3. Examine system memory status in free output
+  4. Analyze system performance trends in vmstat files
+
+  Spanning Tree Protocol Issues
+
+  Primary Files:
+
+
+  * CONFIG_DB.json: STP and MSTP configuration tables
+  * STATE_DB.json: STP operational state information
+  * log/swss.rec.gz: STP state change events and transitions
+  * bridge.vlan, bridge.fdb: Bridge forwarding and VLAN state
+
+  BGP and Routing Issues
+
+  Primary Files:
+
+
+  * bgp.neighbors: BGP neighbor states and session information
+  * bgp.summary: BGP session summary and statistics
+  * bgp.table: BGP routing table entries
+  * ip.route: System routing table
+  * log/bgpd.log.gz, log/zebra.log.gz: Routing daemon logs
+
+  Service Health Issues
+
+  Primary Files:
+
+
+  * STATE_DB.json: ALL_SERVICE_STATUS table for service health
+  * services.summary: Systemd service states
+  * docker.ps: Container operational status
+  * Service-specific logs in log/ directory (bgpd.log.gz, gnmi.log.gz, etc.)
+
+
+  15. Essential Analysis Commands
+
+  Quick Structure Overview
+
+  # Get complete tech support overview
+  echo "=== DIRECTORY STRUCTURE ==="; ls -la
+  echo "=== DUMP FILES (by size) ==="; ls -lah dump/ | sort -k5 -hr | head -10
+  echo "=== LOG FILES (by size) ==="; ls -lah log/ | sort -k5 -hr | head -10
+  echo "=== TOTAL FILES ==="; find . -type f | wc -l
+
+  File Type Analysis
+
+  # Categorize all files
+  echo "JSON databases:"; find . -name "*.json" | wc -l
+  echo "Compressed logs:"; find . -name "*.gz" | wc -l
+  echo "Text files:"; find . -type f ! -name "*.json" ! -name "*.gz" | wc -l
+  echo "Directories:"; find . -type d | wc -l
+
+
+
+  Size-Based Analysis
+
+  # Understand what needs careful handling
+  echo "=== FILES >1MB ==="; find . -type f -size +1M -exec ls -lah {} \;
+  echo "=== FILES 100KB-1MB ==="; find . -type f -size +100k -size -1M | head -10
+  echo "=== SMALL FILES <10KB ==="; find . -type f -size -10k | head -20
+
+
+
+  Cross-File Correlation Examples
+
+  # Interface analysis across multiple sources
+  INTERFACE="Ethernet16"  # Replace with target interface
+  echo "CONFIG:"; grep "$INTERFACE" dump/CONFIG_DB.json | head -3
+  echo "STATE:"; grep "$INTERFACE" dump/STATE_DB.json | head -3
+  echo "STATUS:"; grep "$INTERFACE" dump/interface.status
+  echo "FDB:"; grep "$INTERFACE" dump/bridge.fdb 2>/dev/null || echo "No FDB entries"
+
+  # Hardware status correlation
+  echo "HEALTH:"; grep "SYSTEM_HEALTH" dump/STATE_DB.json
+  echo "SENSORS:"; cat dump/sensors | head -10
+  echo "HARDWARE LOGS:"; gunzip log/syslog.gz | grep -i "hardware\|psu\|fan" | head -5
+
+
+
+
+  16. SONiC Container Architecture Context
+
+  Container Structure
+
+  SONiC operates as a containerized system with specialized containers for different network functions:
+
+  Core Containers:
+
+
+  * database: Redis databases (CONFIG_DB, STATE_DB, etc.)
+  * swss: Switch State Service - core switching logic
+  * syncd: Synchronization daemon - hardware abstraction
+  * bgp: Border Gateway Protocol routing
+  * lldp: Link Layer Discovery Protocol
+  * snmp: Simple Network Management Protocol
+  * teamd: Link Aggregation Control Protocol (LACP)
+  * pmon: Platform monitoring (hardware sensors)
+  * gnmi: gNMI telemetry service
+
+  Container Information in Tech Support Files
+
+  Container-specific information can be found in:
+
+
+  * /dump/container_dumps/: Per-container diagnostic data
+  * docker.ps, docker.stats: Container status and resource usage
+  * Individual container logs in /log/ directory
+  * Container process information in STATE_DB.json DOCKER_STATS table

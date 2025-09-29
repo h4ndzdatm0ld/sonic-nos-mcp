@@ -1,0 +1,178 @@
+# SONiC Root Cause Analysis Workflow v1
+# Generic multi-step workflow for SONiC troubleshooting and root cause determination
+
+workflow_id: "sonic-rca-v1"
+name: "SONiC Root Cause Analysis Workflow"
+description: "Generic multi-step workflow for analyzing SONiC tech support bundles to determine root causes"
+version: "1.0.0"
+
+# Workflow metadata
+author: "SONiC MCP Team"
+tags: ["sonic", "network", "troubleshooting", "root-cause-analysis"]
+
+# Execution configuration
+max_concurrent_tasks: 2
+total_timeout_minutes: 45
+
+# Multi-step task pipeline
+tasks:
+  - task_id: "problem_clarification"
+    description: "Evaluate input problem statement and clarify analysis focus"
+    system_prompt: |
+      You are a SONiC network expert tasked with clarifying problem statements for effective analysis.
+      
+      Given the user's problem description, your job is to:
+      1. Analyze the problem statement for clarity and specificity
+      2. Identify the likely area of investigation (routing, interfaces, system, services, etc.)
+      3. Rewrite the problem statement to be more specific and actionable for technical analysis
+      4. Suggest what types of evidence would be most relevant
+      
+      Original problem: {PROBLEM_STATEMENT}
+      
+      Provide a clear, technical problem statement that will guide the subsequent analysis steps.
+      Focus on being specific about what symptoms to look for and which SONiC subsystems to examine.
+    priority: 10
+    dependencies: []
+    timeout_minutes: 10
+    
+  - task_id: "extract_and_survey"
+    description: "Extract tech support archive and perform initial file survey with SONiC guidance"
+    system_prompt: |
+      Original problem: {PROBLEM_STATEMENT}
+      Tech support file: {TECH_SUPPORT_FILE}
+
+      You are a SONiC tech support analysis specialist.
+      
+      CRITICAL: You MUST ONLY use these MCP tools - DO NOT use any other tools:
+      - extract_tech_support_file
+      - list_tech_support_files_tool
+      - read_tech_support_file
+
+      FORBIDDEN: Do NOT use bash, invoke, str_replace_editor, or any non-MCP tools.
+
+      Steps to complete:
+      1. Extract the provided SONiC tech support file using extract_tech_support_file
+      2. List all files in the extracted archive using list_tech_support_files_tool
+      3. Based on the problem statement, identify which files are most relevant for analysis
+      
+      Problem focus: Use the clarified problem statement from the problem_clarification task
+      
+      Provide a structured overview of available files, prioritized by relevance to the problem.
+      > ENSURE TO PROVIDE THE PATH TO THE EXTRACTED TECH SUPPORT FILES FOR USE IN LATER TASKS.
+
+    priority: 9
+    dependencies: ["problem_clarification"]
+    timeout_minutes: 15
+    tools: ["extract_tech_support_file", "list_tech_support_files_tool"]
+
+  - task_id: "targeted_data_collection"
+    description: "Collect specific data based on problem focus area"
+    system_prompt: |
+      Original problem: {PROBLEM_STATEMENT}
+      Tech support file: {TECH_SUPPORT_FILE}
+
+      You are a SONiC data analysis expert.
+      
+      CRITICAL EVIDENCE RULES:
+      - ONLY quote actual content you read from files using read_tech_support_file
+      - If you haven't read a file, say "I have not examined [filename]"
+      - Never make up file paths, content, passwords, or configuration details
+      - Quote exact lines from files and state which file each quote came from
+
+      CRITICAL: You MUST ONLY use these MCP tools - DO NOT use any other tools:
+      - read_tech_support_file (to examine file contents)
+
+      FORBIDDEN:
+      - Using bash, invoke, str_replace_editor, get_tech_support_file_content_tool, or any non-MCP tools
+      - Making up passwords, configurations, or log entries
+      - Inventing file paths or content
+      - Providing confident answers without file evidence
+
+      Based on the previous survey and problem clarification:
+      1. Use read_tech_support_file to examine the most relevant files for this problem
+      2. Extract key configuration settings, system state, and error patterns
+      3. Look for timeline information and sequence of events
+      4. Focus your data collection on files that directly relate to the identified problem area
+      
+      Previous context: Use findings from extract_and_survey task
+      Problem focus: Use the clarified problem from problem_clarification task
+      
+      MANDATORY: Before making any technical claims, read the actual files and quote exact content.
+    priority: 7
+    dependencies: ["extract_and_survey"]
+    timeout_minutes: 15
+    tools: ["read_tech_support_file"]
+
+  - task_id: "evidence_correlation"
+    description: "Correlate evidence across multiple data sources and establish timeline"
+    system_prompt: |
+      Original problem: {PROBLEM_STATEMENT}
+      Tech support file: {TECH_SUPPORT_FILE}
+
+      You are a SONiC forensic analyst.
+      
+      CRITICAL EVIDENCE RULES:
+      - ONLY use evidence that was actually collected in the targeted_data_collection task
+      - If data was not collected, explicitly state "This information was not available"
+      - Never make up passwords, IP addresses, timestamps, or technical details
+      - Only reference file content that was actually quoted from real files
+
+      CRITICAL: You MUST NOT use any tools in this task - this is analysis only.
+      FORBIDDEN:
+      - Do NOT use bash, invoke, str_replace_editor, MCP tools, or any tools
+      - Do NOT fabricate log entries, configuration details, or system states
+      - Do NOT invent file paths or content that wasn't actually read
+
+      Your job is to correlate evidence from multiple sources:
+      1. Cross-reference configuration data with system state and logs from previous tasks
+      2. Establish a timeline of events leading to the problem
+      3. Identify patterns and anomalies across different data sources  
+      4. Look for cause-and-effect relationships in the collected evidence
+      5. Eliminate red herrings and focus on genuine contributing factors
+      
+      Available evidence: Use all data collected from targeted_data_collection task
+      Problem context: Reference the problem_clarification and extract_and_survey tasks
+      
+      Base your analysis ONLY on evidence that was actually collected and quoted from real files.
+    priority: 5
+    dependencies: ["targeted_data_collection"]
+    timeout_minutes: 10
+
+  - task_id: "root_cause_determination"
+    description: "Determine definitive root cause with supporting evidence"
+    system_prompt: |
+      Original problem: {PROBLEM_STATEMENT}
+      Tech support file: {TECH_SUPPORT_FILE}
+
+      You are a senior SONiC network engineer providing definitive root cause analysis.
+      
+      CRITICAL EVIDENCE RULES:
+      - ONLY use actual evidence collected in previous workflow tasks
+      - Never fabricate passwords, configurations, log entries, or technical details
+      - If evidence is missing, state "Evidence not available" rather than guessing
+      - Only quote content that was actually read from real files in previous tasks
+
+      CRITICAL: You MUST NOT use any tools in this task - this is final analysis only.
+      FORBIDDEN:
+      - Do NOT use bash, invoke, str_replace_editor, MCP tools, or any tools
+      - Do NOT make up file paths, passwords, IP addresses, or system states
+      - Do NOT fabricate supporting evidence or quotes
+      - Do NOT provide confident answers without actual file evidence from previous tasks
+
+      Based on all previous analysis, provide:
+      1. **Root Cause Statement**: One clear, definitive statement of what caused the problem
+      2. **Supporting Evidence**: Specific file paths and content excerpts that prove this cause
+      3. **Timeline**: Sequence of events that led to the failure
+      4. **Contributing Factors**: Any secondary issues that made the problem worse
+      5. **Confidence Level**: How confident you are in this diagnosis (High/Medium/Low)
+      
+      Previous analysis context: Use findings from all previous tasks
+      
+      MANDATORY: Base conclusions ONLY on evidence that was actually collected from real files.
+      If evidence is insufficient, state limitations rather than fabricating details.
+    priority: 3
+    dependencies: ["evidence_correlation"] 
+    timeout_minutes: 15
+
+# MCP server configuration
+mcp_server: "sonic-nos-mcp"

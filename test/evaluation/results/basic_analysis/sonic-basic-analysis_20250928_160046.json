@@ -1,0 +1,18 @@
+[
+  {
+    "test_id": "sonic-basic-002",
+    "category": "file_navigation",
+    "query": "List all JSON configuration files in the tech support bundle. Do not show me anything else.",
+    "expected": "List of JSON files with paths and descriptions",
+    "actual": "**JSON Configuration Files in the Tech Support Bundle:**\n\n- `sonic_dump_sonic_20250927_164055/dump/CONFIG_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/STATE_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/APPL_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/APPL_STATE_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/ASIC_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB_1.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB_2.json`\n- `sonic_dump_sonic_20250927_164055/dump/FLEX_COUNTER_DB.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/config_db.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/init_cfg.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/copp_cfg.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/core_analyzer.rc.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/default_users.json`\n\nPlus various BGP and EVPN JSON files:\n- BGP VRF summary/detail files\n- BGP EVPN VNI and route files  \n- EVPN next hops and VLAN access files\n- FRR BFD peers configuration\n",
+    "response_time": 16.662875,
+    "used_tools": [
+      "extract_tech_support_file",
+      "list_tech_support_files_tool"
+    ],
+    "llm_judge_score": 5,
+    "llm_judge_feedback": "Excellent response that perfectly fulfills the specific request. The agent correctly identified and listed all JSON configuration files in the tech support bundle, providing comprehensive coverage of SONiC database dumps (CONFIG_DB, STATE_DB, APPL_DB, etc.), system configuration files (/etc/sonic/), and network protocol files (BGP, EVPN). The tool usage was appropriate - using both extract_tech_support_file and list_tech_support_files_tool to access and analyze the bundle contents. The response strictly adhered to the constraint \"Do not show me anything else\" by providing only the requested file list without additional descriptions, analysis, or recommendations. The formatting is clean and well-organized, making it easy to scan the results. This demonstrates accurate SONiC knowledge and respect for the user's specific requirements.",
+    "passed": true,
+    "timestamp": "2025-09-28T16:00:46.733831"
+  }
+]

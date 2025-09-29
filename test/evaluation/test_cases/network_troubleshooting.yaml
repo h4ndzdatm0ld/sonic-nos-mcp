@@ -1,0 +1,53 @@
+# Network Troubleshooting Test Cases  
+# Tests SONiC network analysis and diagnostic capabilities
+
+test_cases:
+  - id: "sonic-network-001"
+    category: "interface_analysis"
+    query: "Analyze interface status and identify any down or error interfaces from the tech support data"
+    expected: "Interface status summary with identification of problematic interfaces"
+    expected_tools: ["extract_tech_support_file", "get_tech_support_file_content_tool"]
+    expected_patterns: ["interface", "status", "up", "down", "error"]
+    context:
+      focus: "interface_health"
+      search_files: ["STATE_DB.json", "interface"]
+
+  - id: "sonic-network-002" 
+    category: "bgp_routing"
+    query: "Check BGP neighbor status and routing table health in the SONiC device"
+    expected: "BGP neighbor status and routing information analysis"
+    expected_tools: ["get_tech_support_file_content_tool"]
+    expected_patterns: ["BGP", "neighbor", "routing", "table", "established"]
+    context:
+      protocol: "bgp"
+      search_patterns: ["bgp", "neighbor", "route"]
+
+  - id: "sonic-network-003"
+    category: "log_analysis"
+    query: "Search for network-related errors in system logs from the tech support file"
+    expected: "Network error patterns and timeline from system logs"
+    expected_tools: ["list_tech_support_files_tool", "get_tech_support_file_content_tool"]
+    expected_patterns: ["error", "log", "network", "connection", "timeout"]
+    context:
+      log_types: ["syslog", "kernel.log", "daemon.log"]
+      error_patterns: ["ERROR", "WARN", "FAIL"]
+
+  - id: "sonic-network-004"
+    category: "configuration_review"  
+    query: "Review network configuration files for potential misconfigurations"
+    expected: "Configuration analysis with identification of potential issues"
+    expected_tools: ["list_tech_support_files_tool", "get_tech_support_file_content_tool"]
+    expected_patterns: ["config", "configuration", "json", "settings"]
+    context:
+      config_types: ["json", "conf", "cfg"]
+      validation_focus: "network_settings"
+
+  - id: "sonic-network-005"
+    category: "connectivity_diagnosis"
+    query: "Diagnose potential connectivity issues by analyzing interface counters and error statistics"
+    expected: "Connectivity diagnosis with interface statistics and error analysis"
+    expected_tools: ["get_tech_support_file_content_tool"]
+    expected_patterns: ["counters", "statistics", "errors", "drops", "interface"]
+    context:
+      metrics: ["counters", "errors", "drops"]
+      diagnostic_focus: "connectivity"

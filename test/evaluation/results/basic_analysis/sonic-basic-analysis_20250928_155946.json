@@ -1,0 +1,18 @@
+[
+  {
+    "test_id": "sonic-basic-002",
+    "category": "file_navigation",
+    "query": "List all JSON configuration files in the tech support bundle. Do not show me anything else.",
+    "expected": "List of JSON files with paths and descriptions",
+    "actual": "**JSON Configuration Files:**\n\n- sonic_dump_sonic_20250927_164055/dump/CONFIG_DB.json\n- sonic_dump_sonic_20250927_164055/dump/STATE_DB.json\n- sonic_dump_sonic_20250927_164055/dump/APPL_DB.json\n- sonic_dump_sonic_20250927_164055/dump/APPL_STATE_DB.json\n- sonic_dump_sonic_20250927_164055/dump/ASIC_DB.json\n- sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB.json\n- sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB_1.json\n- sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB_2.json\n- sonic_dump_sonic_20250927_164055/dump/FLEX_COUNTER_DB.json\n- sonic_dump_sonic_20250927_164055/etc/sonic/config_db.json\n- sonic_dump_sonic_20250927_164055/etc/sonic/init_cfg.json\n- sonic_dump_sonic_20250927_164055/etc/sonic/copp_cfg.json\n- sonic_dump_sonic_20250927_164055/etc/sonic/core_analyzer.rc.json\n- sonic_dump_sonic_20250927_164055/etc/sonic/default_users.json\n",
+    "response_time": 14.34671,
+    "used_tools": [
+      "extract_tech_support_file",
+      "list_tech_support_files_tool"
+    ],
+    "llm_judge_score": 4,
+    "llm_judge_feedback": "The response effectively addresses the specific query by providing a comprehensive list of JSON configuration files found in the tech support bundle. The agent correctly identified and listed all relevant JSON files including database dumps (CONFIG_DB.json, STATE_DB.json, etc.) and configuration files (config_db.json, init_cfg.json, etc.). \n\nThe response demonstrates good tool usage by employing the list_tech_support_files_tool to identify files and extract_tech_support_file to examine the bundle contents. The agent followed the constraint of \"Do not show me anything else\" by providing only the requested list without additional explanations or descriptions.\n\nThe accuracy is high - all listed files are legitimate SONiC JSON configuration files with correct paths. The response is highly relevant as it focuses solely on what was requested. Completeness appears strong with a thorough enumeration of JSON files across different categories (database dumps, system configs, etc.).\n\nMinor deduction for using an additional tool (extract_tech_support_file) that wasn't in the expected tools list, though this may have been necessary for thorough file identification. Overall, this is a solid response that meets the query requirements effectively.",
+    "passed": true,
+    "timestamp": "2025-09-28T15:59:46.397783"
+  }
+]

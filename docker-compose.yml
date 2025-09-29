@@ -1,0 +1,68 @@
+services:
+  # Production-ready SONiC NOS MCP server
+  sonic-nos-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: sonic-nos-mcp:latest
+    container_name: sonic-nos-mcp
+    volumes:
+      # Mount current directory for accessing tech support files
+      - .:/workspace:ro
+      # Mount test data for tech support file access
+      - ./test/data:/workspace/data:ro
+      # Mount a temp directory for tech support file extraction
+      - sonic-mcp-temp:/tmp/sonic-mcp
+    working_dir: /workspace
+    stdin_open: true
+    tty: true
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sonic_nos_mcp.server; print('Server module loaded successfully')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Development service with builder stage for faster iteration
+  sonic-nos-mcp-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    image: sonic-nos-mcp:dev
+    container_name: sonic-nos-mcp-dev
+    volumes:
+      # Mount source code for development
+      - ./src:/app/src:ro
+      - ./pyproject.toml:/app/pyproject.toml:ro
+      - ./test/data:/workspace/data:ro
+      - sonic-mcp-temp:/tmp/sonic-mcp
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    environment:
+      - PYTHONPATH=/app/src
+      - PYTHONUNBUFFERED=1
+      - PYTHON_ENV=development
+    command: ["python", "-m", "sonic_nos_mcp.server"]
+    profiles:
+      - dev  # Only start with --profile dev
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sonic_nos_mcp.server; print('Dev server OK')"]
+      interval: 15s
+      timeout: 5s
+      retries: 2
+
+volumes:
+  # Persistent volume for tech support file extraction
+  sonic-mcp-temp:
+    driver: local
+
+networks:
+  default:
+    name: sonic-mcp-network

@@ -1,0 +1,18 @@
+[
+  {
+    "test_id": "sonic-basic-002",
+    "category": "file_navigation",
+    "query": "List all JSON configuration files in the tech support bundle. Do not show me anything else.",
+    "expected": "List of JSON files with paths and descriptions",
+    "actual": "**JSON Configuration Files:**\n\n- sonic_dump_sonic1_20250928_145726/dump/CONFIG_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/APPL_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/STATE_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/APPL_STATE_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/ASIC_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/COUNTERS_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/COUNTERS_DB_1.json\n- sonic_dump_sonic1_20250928_145726/dump/COUNTERS_DB_2.json\n- sonic_dump_sonic1_20250928_145726/dump/FLEX_COUNTER_DB.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/config_db.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/copp_cfg.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/core_analyzer.rc.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/init_cfg.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/default_users.json\n",
+    "response_time": 12.61372,
+    "used_tools": [
+      "extract_tech_support_file",
+      "list_tech_support_files_tool"
+    ],
+    "llm_judge_score": 5,
+    "llm_judge_feedback": "This is an excellent response that perfectly fulfills the specific request. The agent was asked to \"List all JSON configuration files in the tech support bundle. Do not show me anything else.\" and delivered exactly that - a clean, comprehensive list of JSON files with their full paths.\n\n**Strengths:**\n- **Perfect accuracy**: All listed files are legitimate SONiC JSON configuration and database files\n- **Complete coverage**: Includes both database dumps (CONFIG_DB.json, APPL_DB.json, etc.) and configuration files (config_db.json, copp_cfg.json, etc.)\n- **Appropriate tool usage**: Correctly used both extract_tech_support_file and list_tech_support_files_tool to access and analyze the bundle contents\n- **Excellent constraint adherence**: Respected the \"Do not show me anything else\" directive by providing only the requested list without additional descriptions, explanations, or analysis\n- **Proper formatting**: Clear, easy-to-read bullet-point format with full file paths\n\nThe response demonstrates solid SONiC knowledge by identifying all relevant JSON files across different categories (database dumps, system configs, feature configs). The agent appropriately used the necessary tools to extract and examine the tech support bundle contents, then delivered a focused response that meets the query requirements precisely without unnecessary additions.",
+    "passed": true,
+    "timestamp": "2025-09-28T20:48:29.771165"
+  }
+]
