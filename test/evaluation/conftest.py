@@ -229,6 +229,15 @@ def eval_agent_tester_basic(sonic_evaluation_agent, llm_judge_agent, basic_analy
 
 
 @pytest.fixture
+def real_tech_support_file():
+    """Provide real tech support file for evaluation."""
+    tech_file = Path("test/data/techsupport/techsupport_bgp_md5.tar.gz")
+    if not tech_file.exists():
+        pytest.skip(f"Tech support file not found: {tech_file}")
+    return tech_file
+
+
+@pytest.fixture
 def eval_agent_tester_network(
     sonic_evaluation_agent, llm_judge_agent, network_troubleshooting_test_cases, real_tech_support_file
 ):

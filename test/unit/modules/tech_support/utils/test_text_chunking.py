@@ -15,110 +15,8 @@ from sonic_nos_mcp.modules.tech_support.utils.text_chunking import (
     get_file_content_with_pattern,
     get_pattern_matches_first,
     get_default_chunk_size,
-    is_compressed_file,
-    open_file_smart,
 )
 from sonic_nos_mcp.modules.tech_support.models.text_chunking_models import TextChunk
-
-
-class TestIsCompressedFile:
-    """Test is_compressed_file function."""
-
-    def test_gzip_files(self):
-        """Test gzip file detection."""
-        is_compressed, compression_type = is_compressed_file("test.gz")
-        assert is_compressed is True
-        assert compression_type == "gzip"
-
-        is_compressed, compression_type = is_compressed_file("file.GZ")
-        assert is_compressed is True
-        assert compression_type == "gzip"
-
-    def test_xz_files(self):
-        """Test xz file detection."""
-        is_compressed, compression_type = is_compressed_file("test.xz")
-        assert is_compressed is True
-        assert compression_type == "lzma"
-
-    def test_bz2_files(self):
-        """Test bz2 file detection."""
-        is_compressed, compression_type = is_compressed_file("test.bz2")
-        assert is_compressed is True
-        assert compression_type == "bz2"
-
-    def test_uncompressed_files(self):
-        """Test uncompressed file detection."""
-        is_compressed, compression_type = is_compressed_file("test.txt")
-        assert is_compressed is False
-        assert compression_type == ""
-
-        is_compressed, compression_type = is_compressed_file("file.json")
-        assert is_compressed is False
-        assert compression_type == ""
-
-
-class TestOpenFileSmart:
-    """Test open_file_smart function."""
-
-    @pytest.fixture
-    def temp_files(self):
-        """Create temporary files for testing."""
-        temp_dir = Path(tempfile.mkdtemp(prefix="test_open_smart_"))
-
-        # Create regular text file
-        regular_file = temp_dir / "regular.txt"
-        regular_file.write_text("Regular file content")
-
-        # Create gzip file
-        gz_file = temp_dir / "compressed.txt.gz"
-        with gzip.open(gz_file, "wt") as f:
-            f.write("Compressed file content")
-
-        yield temp_dir, regular_file, gz_file
-
-        # Cleanup
-        import shutil
-
-        if temp_dir.exists():
-            shutil.rmtree(temp_dir)
-
-    def test_open_regular_file(self, temp_files):
-        """Test opening regular file."""
-        temp_dir, regular_file, gz_file = temp_files
-
-        with open_file_smart(regular_file, "r") as f:
-            content = f.read()
-
-        assert content == "Regular file content"
-
-    def test_open_gzip_file(self, temp_files):
-        """Test opening gzip file."""
-        temp_dir, regular_file, gz_file = temp_files
-
-        with open_file_smart(gz_file, "rt") as f:
-            content = f.read()
-
-        assert content == "Compressed file content"
-
-    def test_open_nonexistent_file(self):
-        """Test opening non-existent file."""
-        with pytest.raises(FileNotFoundError):
-            open_file_smart("/nonexistent/file.txt", "r")
-
-    @patch("sonic_nos_mcp.modules.tech_support.utils.text_chunking.is_compressed_file")
-    def test_open_unsupported_compression(self, mock_is_compressed):
-        """Test opening file with unsupported compression."""
-        mock_is_compressed.return_value = (True, "unsupported")
-
-        temp_file = Path(tempfile.mktemp(suffix=".unknown"))
-        temp_file.touch()
-
-        try:
-            with pytest.raises(ValueError, match="Unsupported compression format"):
-                open_file_smart(temp_file, "r")
-        finally:
-            if temp_file.exists():
-                temp_file.unlink()
 
 
 class TestGetDefaultChunkSize:
@@ -191,15 +89,19 @@ class TestFileProcessor:
         with pytest.raises(FileNotFoundError):
             processor.read()
 
-    @patch("sonic_nos_mcp.modules.tech_support.utils.text_chunking.open_file_smart")
-    def test_file_processor_read_io_error(self, mock_open_smart, sample_text_file):
-        """Test FileProcessor read with IO error."""
-        mock_open_smart.side_effect = IOError("Read error")
+    def test_file_processor_read_io_error(self, sample_text_file):
+        """Test FileProcessor read with IO error by testing compressed file detection."""
+        # Test the ValueError path when compressed file is detected
+        temp_compressed = Path(tempfile.mktemp(suffix=".txt.gz"))
+        temp_compressed.write_text("compressed content")
 
-        processor = FileProcessor(sample_text_file)
-
-        with pytest.raises(IOError):
-            processor.read()
+        try:
+            processor = FileProcessor(temp_compressed)
+            with pytest.raises(ValueError, match="Compressed file detected"):
+                processor.read()
+        finally:
+            if temp_compressed.exists():
+                temp_compressed.unlink()
 
     def test_file_processor_get_chunk(self, sample_text_file):
         """Test FileProcessor get_chunk method."""
@@ -563,20 +465,19 @@ class TestFileProcessorErrorCases:
         with pytest.raises(FileNotFoundError):
             processor.get_chunk(page=1)
 
-    @patch("sonic_nos_mcp.modules.tech_support.utils.text_chunking.open_file_smart")
-    def test_file_processor_read_with_mock_error(self, mock_open_smart):
-        """Test FileProcessor read method with mocked error."""
-        mock_open_smart.side_effect = IOError("Mocked IO error")
-
+    def test_file_processor_read_with_permission_error(self):
+        """Test FileProcessor read method with permission error."""
+        # Create a file and remove read permissions to simulate permission error
         temp_file = Path(tempfile.mktemp(suffix=".txt"))
-        temp_file.touch()
+        temp_file.write_text("test content")
+        temp_file.chmod(0o000)  # Remove all permissions
 
         try:
             processor = FileProcessor(temp_file)
-
-            with pytest.raises(IOError):
+            with pytest.raises((IOError, PermissionError)):
                 processor.read()
         finally:
+            temp_file.chmod(0o644)  # Restore permissions for cleanup
             if temp_file.exists():
                 temp_file.unlink()
 

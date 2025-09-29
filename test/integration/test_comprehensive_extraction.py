@@ -21,13 +21,13 @@ class TestComprehensiveExtraction:
     @pytest.fixture(scope="class")
     def real_tech_support_file(self):
         """Path to the real tech support file."""
-        test_data_dir = Path(__file__).parent.parent / "data"
-        tech_support_files = list(test_data_dir.glob("sonic_dump_*.tar.gz"))
+        test_data_dir = Path(__file__).parent.parent / "data" / "techsupport"
+        tech_support_file = test_data_dir / "techsupport_bgp_md5.tar.gz"
 
-        if not tech_support_files:
-            pytest.skip("No real tech support file found in test/data")
+        if not tech_support_file.exists():
+            pytest.fail(f"Required test file not found: {tech_support_file}")
 
-        return tech_support_files[0]
+        return tech_support_file
 
     def test_complete_extraction_verification(self, real_tech_support_file):
         """Test that 100% of files are extracted and decompressed correctly."""

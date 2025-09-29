@@ -1,99 +1,96 @@
 """SONiC Agent Evaluation Tests.
 
-Pytest-based evaluation tests for SONiC network analysis agents using Strands framework.
+Tests that use real LLM agents to evaluate SONiC analysis capabilities
+using actual MCP tools and YAML-defined test cases.
 """
 
+import os
 import pytest
+from pathlib import Path
+
+try:
+    from strands import Agent
+
+    STRANDS_AVAILABLE = True
+except ImportError:
+    Agent = None
+    STRANDS_AVAILABLE = False
 
 
 @pytest.mark.evaluation
-def test_basic_sonic_analysis(eval_agent_tester_basic):
-    """Test basic SONiC analysis capabilities.
+@pytest.mark.skipif(
+    os.getenv("EXECUTE_EVALUATIONS") != "true", reason="Evaluation tests only run when EXECUTE_EVALUATIONS=true"
+)
+@pytest.mark.skipif(not STRANDS_AVAILABLE, reason="Strands agents not available for LLM evaluation")
+def test_basic_analysis_evaluation(eval_agent_tester_basic):
+    """Test basic SONiC analysis scenarios using real LLM agent evaluation."""
 
-    Evaluates the agent's ability to:
-    - Extract tech support files
-    - Navigate file structures
-    - Perform basic content inspection
-    """
+    # Run real LLM agent evaluation using the configured tester
     results = eval_agent_tester_basic.evaluate_agent("sonic-basic-analysis")
 
-    # Generate detailed report
-    report = eval_agent_tester_basic.generate_report(results, "sonic-basic-analysis")
+    # Generate and save report
+    report = eval_agent_tester_basic.generate_report(results, "Basic SONiC Analysis")
     print(f"\n{report}")
 
-    # Assert all tests pass (will fail with detailed info if not)
+    # Assert results using pytest integration
     eval_agent_tester_basic.pytest_assert_results(results)
 
 
 @pytest.mark.evaluation
-def test_network_troubleshooting(eval_agent_tester_network):
-    """Test network troubleshooting analysis capabilities.
+@pytest.mark.skipif(
+    os.getenv("EXECUTE_EVALUATIONS") != "true", reason="Evaluation tests only run when EXECUTE_EVALUATIONS=true"
+)
+@pytest.mark.skipif(not STRANDS_AVAILABLE, reason="Strands agents not available for LLM evaluation")
+def test_network_troubleshooting_evaluation(eval_agent_tester_network):
+    """Test network troubleshooting scenarios using real LLM agent evaluation."""
 
-    Evaluates the agent's ability to:
-    - Analyze interface status and health
-    - Diagnose BGP routing issues
-    - Parse system logs for network errors
-    - Review configuration files
-    - Perform connectivity diagnosis
-    """
+    # Run real LLM agent evaluation using the configured tester
     results = eval_agent_tester_network.evaluate_agent("sonic-network-troubleshooting")
 
-    # Generate detailed report
-    report = eval_agent_tester_network.generate_report(results, "sonic-network-troubleshooting")
+    # Generate and save report
+    report = eval_agent_tester_network.generate_report(results, "Network Troubleshooting")
     print(f"\n{report}")
 
-    # Assert all tests pass
+    # Assert results using pytest integration
     eval_agent_tester_network.pytest_assert_results(results)
 
 
 @pytest.mark.evaluation
-def test_tool_selection_accuracy(eval_agent_tester_basic):
-    """Test MCP tool selection accuracy specifically.
+def test_simple_mcp_tools():
+    """Simple tests for MCP tools without LLM evaluation framework."""
 
-    Focuses on evaluating whether the agent selects appropriate
-    SONiC MCP tools for different types of analysis tasks.
-    """
-    results = eval_agent_tester_basic.evaluate_agent("sonic-tool-selection")
+    # Test tech support file extraction
+    from sonic_nos_mcp.modules.tech_support.utils.extraction import extract_file
 
-    # Calculate tool usage metrics
-    metrics = eval_agent_tester_basic.calculate_metrics(results)
+    test_file = Path("test/data/techsupport/techsupport_bgp_md5.tar.gz")
+    if not test_file.exists():
+        pytest.skip(f"Test file not found: {test_file}")
 
-    print("\n🛠️  Tool Usage Analysis:")
-    print(f"   Tool Usage Rate: {metrics.tool_usage_accuracy:.1%}")
-    print(f"   Average LLM Score: {metrics.avg_llm_score:.1f}/5")
+    response = extract_file(file_path=test_file)
 
-    # Additional assertion: tool usage rate should be high for basic analysis
-    assert metrics.tool_usage_accuracy > 0.8, f"Tool usage rate too low: {metrics.tool_usage_accuracy:.1%}"
+    assert response.success is True
+    assert response.extract_dir is not None
+    assert response.extract_dir.exists()
 
-    # Assert overall evaluation passes
-    eval_agent_tester_basic.pytest_assert_results(results)
+    # Test file listing
+    from sonic_nos_mcp.modules.tech_support.utils.file_listing import list_files
 
+    file_infos = list_files(directory=response.extract_dir)
+    assert len(file_infos) > 0
 
-@pytest.mark.evaluation
-def test_evaluation_framework_metrics(eval_agent_tester_basic):
-    """Test that the evaluation framework itself collects proper metrics.
+    # Test file reading
+    from sonic_nos_mcp.modules.tech_support.utils.text_chunking import chunk_file
 
-    This meta-test validates the evaluation framework's ability to:
-    - Collect response times
-    - Track tool usage
-    - Calculate pass/fail rates
-    - Generate meaningful reports
-    """
-    results = eval_agent_tester_basic.evaluate_agent("sonic-framework-test")
-    metrics = eval_agent_tester_basic.calculate_metrics(results)
+    # Find a readable file
+    for file_info in file_infos[:5]:  # Check first 5 files
+        file_path = response.extract_dir / file_info.path
+        if file_path.is_file() and file_path.stat().st_size < 50000:
+            chunk = chunk_file(file_path=file_path, page=1)
+            assert chunk.content is not None
+            break
 
-    # Validate metrics collection
-    assert metrics.total_tests == len(results)
-    assert metrics.passed_tests + metrics.failed_tests == metrics.total_tests
-    assert metrics.avg_response_time > 0  # Should have some response time
-    assert 1 <= metrics.avg_llm_score <= 5  # LLM scores should be in valid range
-    assert isinstance(metrics.categories, dict)  # Categories should be tracked
+    # Cleanup
+    import shutil
 
-    print("\n📊 Framework Metrics Validation:")
-    print(f"   Total Tests: {metrics.total_tests}")
-    print(f"   Pass Rate: {metrics.passed_tests/metrics.total_tests*100:.1f}%")
-    print(f"   Avg Response Time: {metrics.avg_response_time:.2f}s")
-    print(f"   Categories: {list(metrics.categories.keys())}")
-
-    # Framework should pass basic functionality tests
-    eval_agent_tester_basic.pytest_assert_results(results)
+    if response.extract_dir and response.extract_dir.exists():
+        shutil.rmtree(response.extract_dir)

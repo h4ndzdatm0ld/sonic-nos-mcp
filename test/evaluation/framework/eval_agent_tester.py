@@ -1,7 +1,6 @@
 """SONiC Agent Evaluation Framework.
 
 Dataclass-based evaluation framework for testing SONiC analysis agents with LLM judge evaluation.
-Supports both single-step evaluation and multi-step workflow execution.
 """
 
 import json
@@ -14,26 +13,12 @@ from pathlib import Path
 import pytest
 
 try:
-    import pandas as pd
-    import matplotlib.pyplot as plt
-
-    OPTIONAL_DEPS_AVAILABLE = True
-except ImportError:
-    pd = None
-    plt = None
-    OPTIONAL_DEPS_AVAILABLE = False
-
-try:
     from strands import Agent
-    from strands_tools import workflow
 
     STRANDS_AVAILABLE = True
 except ImportError:
     Agent = None
-    workflow = None
     STRANDS_AVAILABLE = False
-
-from ..workflow_loader import WorkflowLoader
 
 
 @dataclass
@@ -84,7 +69,7 @@ class EvaluationMetrics:
 
 @dataclass
 class EvalAgentTester:
-    """SONiC Agent Evaluation Framework with LLM judge."""
+    """SONiC Agent Evaluation Framework with real LLM agents."""
 
     agent: Agent
     evaluator_agent: Agent
@@ -150,37 +135,38 @@ class EvalAgentTester:
         return results
 
     def _extract_used_tools(self, response) -> List[str]:
-        """Extract tools used from agent response metrics."""
+        """Extract tools used from real Strands agent response metrics."""
         used_tools = []
 
-        # Strands AgentResult always has metrics with tool_metrics dictionary
-        for tool_name, tool_metric in response.metrics.tool_metrics.items():
-            if tool_metric.call_count > 0:
-                used_tools.append(tool_name)
+        # Strands AgentResult has metrics with tool_metrics dictionary
+        if hasattr(response, "metrics") and hasattr(response.metrics, "tool_metrics"):
+            for tool_name, tool_metric in response.metrics.tool_metrics.items():
+                if hasattr(tool_metric, "call_count") and tool_metric.call_count > 0:
+                    used_tools.append(tool_name)
 
         return used_tools
 
     def _llm_judge_evaluate(
         self, case: EvaluationCase, response, used_tools: Optional[List[str]] = None
     ) -> Tuple[int, str]:
-        """Use LLM judge to evaluate response quality for SONiC analysis."""
+        """Use real LLM judge agent to evaluate response quality for SONiC analysis."""
         # Extract tool usage if not provided
         if used_tools is None:
             used_tools = self._extract_used_tools(response)
 
         eval_prompt = f"""
         You are evaluating a SONiC network analysis agent response.
-        
+
         Query: {case.query}
         Expected: {case.expected or 'Not specified'}
         Expected Tools: {case.expected_tools}
         Expected Patterns: {case.expected_patterns}
-        
+
         ACTUAL TOOLS USED: {used_tools}
 
         Agent Response:
         {response}
-        
+
         CRITICAL EVALUATION RULES:
         1. ONLY evaluate what was explicitly requested in the Query
         2. DO NOT penalize for missing information that was NOT requested
@@ -194,14 +180,14 @@ class EvalAgentTester:
         2. Relevance - addresses ONLY the specific query, nothing more/less
         3. Completeness - complete for what was requested (not what could be added)
         4. Tool Usage - appropriate use of MCP tools (ACTUAL TOOLS USED: {used_tools})
-        
+
         Important:
         - The agent DID use the tools listed above. Do not claim "no tool usage".
         - If the query has constraints like "Do not show me anything else", the response should be scored highly for respecting those constraints.
         - Do not suggest adding descriptions, organization, or details if they weren't requested.
 
         Provide a score from 1-5 (where 5 is excellent) and brief feedback.
-        
+
         Format your response as:
         SCORE: X
         FEEDBACK: Your detailed explanation here
@@ -419,164 +405,3 @@ class EvalAgentTester:
             pytest.fail(f"\n🚨 Evaluation failed for {len(failed_cases)} test cases:\n\n{failure_summary}")
 
         print(f"✅ All {len(results)} evaluation cases passed!")
-
-    def evaluate_workflow(self, workflow_yaml: Path, problem_statement: str, agent_name: str) -> EvaluationResult:
-        """Execute a YAML-defined workflow and evaluate the final result.
-
-        Args:
-            workflow_yaml: Path to YAML workflow definition file
-            problem_statement: Problem statement to inject into workflow
-            agent_name: Name for result identification
-
-        Returns:
-            EvaluationResult: Evaluation of the workflow's final output
-        """
-        if not STRANDS_AVAILABLE:
-            pytest.skip("Strands agents not available for workflow evaluation")
-
-        # Create workflow agent with workflow tool
-        workflow_agent = Agent(
-            model=self.agent.model,
-            system_prompt="You coordinate multi-step SONiC analysis workflows.",
-            tools=[workflow],
-            record_direct_tool_call=True,
-        )
-
-        start_time = datetime.datetime.now()
-
-        try:
-            # Load and convert YAML workflow to Strands format
-            workflow_config = WorkflowLoader.load_workflow_for_strands(workflow_yaml, problem_statement)
-
-            print(f"🔄 Creating workflow: {workflow_config['workflow_id']}")
-
-            # Create workflow
-            workflow_agent.tool.workflow(action="create", **workflow_config)
-
-            # Start workflow execution
-            print("▶️  Starting workflow execution...")
-            workflow_agent.tool.workflow(
-                action="start",
-                workflow_id=workflow_config["workflow_id"],
-                user_input=f"Problem: {problem_statement}\nTech support file: {self.tech_support_file}",
-            )
-
-            # Monitor workflow execution
-            final_result = self._monitor_workflow_execution(workflow_agent, workflow_config["workflow_id"])
-
-            execution_time = (datetime.datetime.now() - start_time).total_seconds()
-
-            # Extract used tools from workflow execution
-            used_tools = self._extract_workflow_tools(final_result)
-
-            # Create evaluation case for final result
-            workflow_case = EvaluationCase(
-                id=f"workflow-{workflow_config['workflow_id']}",
-                query=f"Root cause analysis: {problem_statement}",
-                category="workflow_execution",
-                expected="Definitive root cause statement with supporting evidence",
-                expected_tools=[
-                    "extract_tech_support_file",
-                    "list_tech_support_files_tool",
-                    "get_tech_support_file_content_tool",
-                ],
-                expected_patterns=["root cause", "evidence", "timeline"],
-            )
-
-            # LLM Judge evaluation of final result
-            judge_score, judge_feedback = self._llm_judge_evaluate(workflow_case, final_result)
-            passed = judge_score >= 4  # Workflow must score 4+ to pass
-
-            result = EvaluationResult(
-                test_id=workflow_case.id,
-                category=workflow_case.category,
-                query=workflow_case.query,
-                expected=workflow_case.expected,
-                actual=str(final_result),
-                response_time=execution_time,
-                used_tools=used_tools,
-                llm_judge_score=judge_score,
-                llm_judge_feedback=judge_feedback,
-                passed=passed,
-            )
-
-            print(f"🏁 Workflow completed: Score {judge_score}/5 ({execution_time:.1f}s)")
-            return result
-
-        except Exception as e:
-            execution_time = (datetime.datetime.now() - start_time).total_seconds()
-            print(f"❌ Workflow failed: {e}")
-
-            # Return failed result
-            return EvaluationResult(
-                test_id=f"workflow-{workflow_yaml.stem}",
-                category="workflow_execution",
-                query=f"Root cause analysis: {problem_statement}",
-                expected="Successful workflow execution",
-                actual=f"Workflow failed: {e}",
-                response_time=execution_time,
-                used_tools=[],
-                llm_judge_score=1,
-                llm_judge_feedback=f"Workflow execution failed: {e}",
-                passed=False,
-            )
-
-    def _monitor_workflow_execution(self, workflow_agent: Agent, workflow_id: str, max_wait_minutes: int = 45) -> str:
-        """Monitor workflow execution until completion.
-
-        Args:
-            workflow_agent: Agent with workflow tool
-            workflow_id: ID of workflow to monitor
-            max_wait_minutes: Maximum time to wait for completion
-
-        Returns:
-            str: Final workflow result
-        """
-        import time
-
-        start_time = datetime.datetime.now()
-        max_wait_seconds = max_wait_minutes * 60
-
-        while True:
-            # Check workflow status
-            status_response = workflow_agent.tool.workflow(action="status", workflow_id=workflow_id)
-
-            if "completed" in str(status_response).lower():
-                print("✅ Workflow completed successfully")
-                return str(status_response)
-            elif "failed" in str(status_response).lower():
-                print("❌ Workflow failed")
-                return str(status_response)
-
-            # Check timeout
-            elapsed = (datetime.datetime.now() - start_time).total_seconds()
-            if elapsed > max_wait_seconds:
-                print(f"⏰ Workflow timeout after {elapsed:.1f}s")
-                return f"Workflow timeout after {elapsed:.1f} seconds"
-
-            # Wait before next check
-            time.sleep(5)
-            print(f"⏳ Workflow running... ({elapsed:.0f}s elapsed)")
-
-    def _extract_workflow_tools(self, workflow_result: str) -> List[str]:
-        """Extract MCP tools used during workflow execution.
-
-        Args:
-            workflow_result: Final workflow result string
-
-        Returns:
-            List[str]: Names of MCP tools used
-        """
-        # Look for tool usage patterns in the workflow result
-        sonic_tools = [
-            "extract_tech_support_file",
-            "list_tech_support_files_tool",
-            "get_tech_support_file_content_tool",
-        ]
-
-        used_tools = []
-        for tool in sonic_tools:
-            if tool in workflow_result:
-                used_tools.append(tool)
-
-        return used_tools

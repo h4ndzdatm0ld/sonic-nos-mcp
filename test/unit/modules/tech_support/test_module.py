@@ -121,9 +121,9 @@ class TestTechSupportModule:
         # Verify tool registration occurred
         assert mock_mcp.tool.call_count >= 3
 
-    @patch("sonic_nos_mcp.modules.tech_support.module.get_tech_support_file_content")
+    @patch("sonic_nos_mcp.modules.tech_support.module.read_tech_support_file_content")
     def test_get_tech_support_file_content_tool_registration(self, mock_content_function):
-        """Test that get_tech_support_file_content_tool is registered correctly."""
+        """Test that read_tech_support_file_content_tool is registered correctly."""
         mock_mcp = Mock()
         mock_content_function.return_value = Mock(
             content="test content",

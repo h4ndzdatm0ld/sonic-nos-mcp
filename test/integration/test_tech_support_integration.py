@@ -24,8 +24,6 @@ from sonic_nos_mcp.modules.tech_support.utils.text_chunking import (
     FileProcessor,
     chunk_file,
     get_file_content_with_pattern,
-    open_file_smart,
-    is_compressed_file,
 )
 
 
@@ -37,12 +35,12 @@ class TestTechSupportIntegration:
         """Path to the real tech support file."""
         # Look for the tech support file in test/data/techsupport directory
         test_data_dir = Path(__file__).parent.parent / "data" / "techsupport"
-        tech_support_files = list(test_data_dir.glob("sonic_dump_*.tar.gz"))
+        tech_support_file = test_data_dir / "techsupport_bgp_md5.tar.gz"
 
-        if not tech_support_files:
-            pytest.skip("No real tech support file found in test/data/techsupport")
+        if not tech_support_file.exists():
+            pytest.fail(f"Required test file not found: {tech_support_file}")
 
-        return tech_support_files[0]
+        return tech_support_file
 
     @pytest.fixture(scope="class")
     def extracted_tech_support(self, real_tech_support_file):
@@ -195,7 +193,7 @@ class TestTechSupportIntegration:
         # But we won't fail the test if none do, as file content varies
 
     def test_compressed_file_handling(self, extracted_tech_support):
-        """Test handling of compressed files."""
+        """Test handling of compressed files by checking extraction behavior."""
         # Find compressed files in the extracted directory
         compressed_files = []
         for file_path in extracted_tech_support.rglob("*.gz"):
@@ -207,20 +205,13 @@ class TestTechSupportIntegration:
         if not compressed_files:
             pytest.skip("No compressed files found in extracted tech support")
 
-        # Test compression detection
+        # Test that FileProcessor detects compressed files properly
         test_file = compressed_files[0]
-        is_compressed, compression_type = is_compressed_file(test_file)
-        assert is_compressed is True
-        assert compression_type == "gzip"
+        processor = FileProcessor(test_file)
 
-        # Test smart file opening
-        try:
-            with open_file_smart(test_file, "rt") as f:
-                content = f.read(100)  # Read first 100 characters
-                assert isinstance(content, str)
-        except Exception as e:
-            # Some compressed files might be binary or corrupted
-            pytest.skip(f"Could not read compressed file {test_file}: {e}")
+        # Should raise ValueError when trying to read compressed files
+        with pytest.raises(ValueError, match="Compressed file detected"):
+            processor.read()
 
     def test_get_file_content_with_pattern(self, extracted_tech_support):
         """Test the main content extraction function with real data."""
