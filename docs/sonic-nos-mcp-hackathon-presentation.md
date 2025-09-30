@@ -115,24 +115,263 @@ read_tech_support_file(
 
 ---
 
-# 📊 **LLM Evaluation Framework**
+# 🔍 **5-Step RCA Workflow Deep Dive**
 
-```python
-@dataclass
-class EvaluationResult:
-    test_id: str
-    actual: str
-    llm_judge_score: int      # 1-5 scoring
-    llm_judge_feedback: str
-    used_tools: List[str]
-    passed: bool
+```mermaid
+graph TD
+    A[Problem Statement] --> B[Problem Clarification Agent]
+    B --> C[Tech Support Extraction Agent]
+    C --> D[Targeted Data Collection Agent]
+    D --> E[Evidence Correlation Agent]
+    E --> F[Root Cause Determination Agent]
+    F --> G[Final Analysis Report]
+
+    style B fill:#e1f5fe
+    style C fill:#f3e5f5
+    style D fill:#fff3e0
+    style E fill:#e8f5e8
+    style F fill:#ffebee
 ```
 
-### Features
-- **LLM Judge Evaluation** - Automated quality scoring
-- **Tool Usage Validation** - Ensure proper MCP tool usage
-- **Performance Metrics** - Response time tracking
-- **Category Analysis** - System health, BGP, hardware, etc.
+**Specialized agents with Claude Sonnet 4.5** → Each step optimized for specific analysis tasks
+
+---
+
+# 🤖 **Agent Pipeline Implementation**
+
+### Agent Specialization with MCP Tools
+```python
+# Each agent has specialized system prompts
+problem_clarifier = Agent(
+    model=BedrockModel("global.anthropic.claude-sonnet-4-5-20250929-v1:0"),
+    tools=mcp_tools,
+    system_prompt="SONiC network expert with MCP server access..."
+)
+
+# 5 specialized agents in sequence:
+agents = {
+    "problem_clarifier": problem_clarifier,      # Step 1
+    "tech_extractor": tech_extractor,            # Step 2
+    "data_collector": data_collector,            # Step 3
+    "evidence_analyst": evidence_analyst,        # Step 4
+    "root_cause_determiner": root_cause_determiner  # Step 5
+}
+```
+
+**Anti-hallucination enforcement** → Agents forbidden from using non-MCP tools
+
+---
+
+# 📊 **Three Virtualized SONiC Use Cases**
+
+### Real Lab-Generated Scenarios
+| Scenario | Fault Induced | Key Evidence Files |
+|----------|---------------|-------------------|
+| **BGP MD5 Auth** | MD5 password mismatch | `dump/CONFIG_DB.json`, `log/syslog.gz` |
+| **Syncd Crash** | `docker kill syncd` | `dump/docker.ps`, crash logs |
+| **OOM Panic** | Memory exhaustion | `dump/reboot.cause.history`, sysctl config |
+
+**Built with OpenAI Codex** → Physical hardware containerlab scenarios
+
+### Link to Test Data
+📁 **[test/data/techsupport/README.md](test/data/techsupport/README.md)** - Complete scenario documentation
+
+---
+
+# 🧪 **Use Case 1: BGP MD5 Authentication**
+
+### Scenario Details
+- **Problem**: BGP neighbor `10.255.0.2` stuck in `Active`/`Connect` state
+- **Root Cause**: Misconfigured MD5 password on `sonic1`
+
+### Expected Evidence Chain
+```bash
+# MCP Analysis Path:
+extract_tech_support_file("techsupport_bgp_md5.tar.gz")
+→ read_tech_support_file("dump/CONFIG_DB.json", pattern="BGP_NEIGHBOR.*10\.255\.0\.2")
+→ read_tech_support_file("log/syslog.gz", pattern="password.*mismatch")
+```
+
+### AI Agent Discovery
+**Agent finds**: `BGP_NEIGHBOR|10.255.0.2` with `auth_type: md5` and bogus secret
+**Timeline**: Session never established due to auth failures
+**Confidence**: High - Configuration mismatch with log correlation
+
+---
+
+# 💥 **Use Case 2: Syncd Container Crash**
+
+### Scenario Details
+- **Problem**: ASIC pipeline container crash loop
+- **Root Cause**: `docker kill syncd` triggered forwarding instability
+
+### Evidence Discovery Pattern
+```bash
+# Agent Analysis Workflow:
+extract_tech_support_file("techsupport_syncd_crash.tar.gz")
+→ read_tech_support_file("dump/docker.ps") # Shows recent restart
+→ read_tech_support_file("log/syslog.gz", pattern="syncd.*crash")
+→ read_tech_support_file("dump/saidump") # Empty due to restart
+```
+
+### Key Findings
+**Container Uptime**: Few seconds when captured
+**Log Evidence**: Exit/crash traces in syslog
+**Impact**: Forwarding dataplane unstable during recovery
+
+---
+
+# 🧠 **Use Case 3: Memory Exhaustion & OOM**
+
+### Scenario Details
+- **Problem**: Aggressive memory ballooning in `swss` container
+- **Root Cause**: `vm.panic_on_oom = 2` converts OOM into system panic
+
+### Complex Evidence Correlation
+```bash
+# Multi-file Analysis Required:
+dump/reboot.cause.history → Back-to-back "Unknown" reboots at 15:52-16:01
+dump/docker.ps → Infrastructure services recently restarted
+etc/sysctl.conf → vm.panic_on_oom = 2 explains kernel behavior
+log/syslog.1.gz → Warm-start sequences after enforced reboot
+```
+
+### Agent Correlation Skills
+**Timeline Reconstruction**: Memory stress → OOM → Panic → Reboot cycle
+**Configuration Impact**: Sysctl setting masks traditional OOM-killer logs
+
+---
+
+# 📊 **Enhanced Evaluation Framework**
+
+### 5-Step Agent Validation Process
+```python
+class AgentEvaluationFramework:
+    def evaluate_rca_workflow(self, test_case: TestCase) -> EvaluationResult:
+        # Step 1: Tool Usage Validation
+        validate_mcp_tools_only(agent_response)
+
+        # Step 2: Evidence Verification
+        verify_file_content_quotes(agent_response, actual_files)
+
+        # Step 3: LLM Judge Scoring (1-5 scale)
+        judge_score = llm_judge.evaluate(response, expected_patterns)
+
+        # Step 4: Root Cause Accuracy
+        accuracy = compare_diagnosis(response.root_cause, expected_cause)
+
+        # Step 5: Performance Metrics
+        return EvaluationResult(response_time, tool_usage, accuracy)
+```
+
+### Test Case Categories
+**Network Troubleshooting** → BGP, LLDP, routing protocol analysis
+**System Health** → Memory, CPU, container service diagnostics
+**Hardware Monitoring** → PSU, temperature, fan status analysis
+
+---
+
+# 🚀 **Hackathon Journey: From Idea to Implementation**
+
+### Day 1: Deep Dive & Discovery
+```bash
+# Started with containerlab exploration
+1. Reviewed containerlab documentation for virtual SONiC images
+2. Fell down rabbit hole trying to build custom containerlab image
+3. Prepared pull request to srlabs for SONiC containerization
+```
+
+### Day 2-3: Lab Environment & Data Generation
+```bash
+# Physical hardware lab setup with containerlab
+4. Used OpenAI Codex on physical Linux device hosting containerlab
+5. Created three realistic failure scenarios in test/data/techsupport/
+6. Generated authentic tech support bundles with real fault conditions
+```
+
+**Link**: 📁 **[test/data/techsupport/README.md](test/data/techsupport/README.md)** - Complete scenario documentation
+
+---
+
+# 🎯 **Hackathon Journey: Iteration & Refinement**
+
+### Day 4: Evaluation Framework Development
+```bash
+# Built comprehensive testing system
+7. Pulled tech support files and created evaluation agent framework
+8. Developed unit testing methodology for LLM agent responses
+9. Implemented LLM Judge scoring with 1-5 scale validation
+```
+
+### Day 5-6: MCP Tool Optimization
+```bash
+# Refined MCP server based on evaluation feedback
+10. Iterated on MCP tool design by evaluating LLM output quality
+11. Found and fixed obvious limitations for LLM consumption
+12. Added chunking, regex patterns, and validation guards
+```
+
+### Day 7: Claude Sonnet 4.5 Integration! 🎉
+```bash
+# Perfect timing - released Monday during hackathon!
+13. Enjoyed using Anthropic's new Claude Sonnet 4.5
+14. Integrated 16k token context for complex analysis workflows
+15. Achieved better reasoning and evidence correlation
+```
+
+---
+
+# 🧠 **Claude Sonnet 4.5: Game Changer**
+
+### Why Claude Sonnet 4.5 Was Perfect for This Project
+
+```python
+# Model Configuration
+bedrock_model = BedrockModel(
+    model_id="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+    max_tokens=16000,  # Extended context for complex analysis
+)
+```
+
+### Key Advantages for SONiC Analysis
+✅ **Extended Context** - 16k tokens handle large tech support files
+✅ **Superior Reasoning** - Better evidence correlation across files
+✅ **Tool Adherence** - Excellent at following MCP-only restrictions
+✅ **Technical Accuracy** - Improved understanding of network protocols
+✅ **Structured Output** - Consistent analysis format and quality
+
+### Impact on Project Success
+**Before Sonnet 4.5**: Good analysis, occasional hallucinations
+**After Sonnet 4.5**: Exceptional accuracy, reliable evidence-based conclusions
+
+---
+
+# 📈 **CLI Usage & Real-World Examples**
+
+### Command-Line Interface
+```bash
+# BGP routing issue analysis
+uv run python examples/invokeWorkflow.py \
+  --prompt "BGP neighbor 10.255.0.2 keeps flapping" \
+  --tech-support-file test/data/techsupport/techsupport_bgp_md5.tar.gz \
+  --verbose
+
+# Memory/OOM issue investigation
+uv run python examples/invokeWorkflow.py \
+  --prompt "System experiencing out of memory conditions" \
+  --tech-support-file test/data/techsupport/techsupport_oom.tar.gz
+
+# System crash analysis
+uv run python examples/invokeWorkflow.py \
+  --prompt "syncd process keeps crashing" \
+  --tech-support-file test/data/techsupport/techsupport_syncd_crash.tar.gz
+```
+
+### Output: Professional RCA Reports
+- **Root Cause Statement** with confidence level
+- **Supporting Evidence** with file paths and content quotes
+- **Timeline of Events** leading to failure
+- **Contributing Factors** and secondary issues
 
 ---
 

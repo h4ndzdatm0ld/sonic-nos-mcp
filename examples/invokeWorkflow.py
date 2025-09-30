@@ -3,6 +3,21 @@
 
 This script provides a command-line interface to invoke the SONiC RCA workflow
 using the simplified sequential agent approach.
+
+uv run python examples/invokeWorkflow.py \
+--prompt "BGP neighbor 10.255.0.2 keeps flapping and won't establish session. Use the sonic MCP server to investigate - start by viewing sonic tech support guide mcp resource" \
+--tech-support-file test/data/techsupport/techsupport_bgp_md5.tar.gz \
+--verbose
+
+# Memory/OOM issue
+uv run python examples/invokeWorkflow.py \
+--prompt "System experiencing out of memory conditions" \
+--tech-support-file test/data/techsupport/techsupport_oom.tar.gz
+
+# System crash issue
+uv run python examples/invokeWorkflow.py \
+--prompt "syncd process keeps crashing" \
+--tech-support-file test/data/techsupport/techsupport_syncd_crash.tar.gz
 """
 
 import sys
@@ -90,18 +105,18 @@ def main():
         epilog="""
 Examples:
   # BGP routing issue
-  python examples/invokeWorkflow.py \\
-    --prompt "BGP neighbor 10.255.0.2 keeps flapping and won't establish session" \\
+  uv run python examples/invokeWorkflow.py \\
+    --prompt "BGP neighbor 10.255.0.2 keeps flapping and won't establish session. Use the sonic MCP server to investigate - start by viewing sonic tech support guide mcp resource" \\
     --tech-support-file test/data/techsupport/techsupport_bgp_md5.tar.gz \\
     --verbose
 
   # Memory/OOM issue
-  python examples/invokeWorkflow.py \\
+  uv run python examples/invokeWorkflow.py \\
     --prompt "System experiencing out of memory conditions" \\
     --tech-support-file test/data/techsupport/techsupport_oom.tar.gz
 
   # System crash issue
-  python examples/invokeWorkflow.py \\
+    uv run python examples/invokeWorkflow.py \\
     --prompt "syncd process keeps crashing" \\
     --tech-support-file test/data/techsupport/techsupport_syncd_crash.tar.gz
         """,
