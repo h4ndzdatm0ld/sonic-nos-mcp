@@ -4,43 +4,18 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 import pytest
+from pydantic import ValidationError
 
 from sonic_nos_mcp.modules.tech_support.tools.extract_tool import (
     extract_tech_support,
-    _safe_abspath,
-    _validate_inputs,
 )
 from sonic_nos_mcp.modules.tech_support.models.extraction_models import (
     ExtractTechSupportRequest,
-    ExtractTechSupportResponse,
 )
 
 
-class TestSafeAbspath:
-    """Test _safe_abspath utility function."""
-
-    def test_safe_abspath_regular_path(self):
-        """Test _safe_abspath with regular path."""
-        result = _safe_abspath("test.txt")
-        assert isinstance(result, str)
-        assert Path(result).is_absolute()
-
-    def test_safe_abspath_with_tilde(self):
-        """Test _safe_abspath with home directory expansion."""
-        result = _safe_abspath("~/test.txt")
-        assert isinstance(result, str)
-        assert "~" not in result  # Should be expanded
-        assert Path(result).is_absolute()
-
-    def test_safe_abspath_already_absolute(self):
-        """Test _safe_abspath with already absolute path."""
-        abs_path = "/absolute/path/test.txt"
-        result = _safe_abspath(abs_path)
-        assert result == str(Path(abs_path).resolve())
-
-
-class TestValidateInputs:
-    """Test _validate_inputs function."""
+class TestExtractTechSupportRequestValidation:
+    """Test Pydantic validation in ExtractTechSupportRequest model."""
 
     @pytest.fixture
     def temp_file(self):
@@ -65,48 +40,75 @@ class TestValidateInputs:
         if temp_dir.exists():
             shutil.rmtree(temp_dir)
 
-    def test_validate_inputs_valid_file(self, temp_file):
-        """Test validation with valid file."""
+    def test_valid_file_path_validation(self, temp_file):
+        """Test validation with valid file path."""
         request = ExtractTechSupportRequest(file_path=str(temp_file))
 
-        # Should not raise exception
-        _validate_inputs(request)
+        # Should create request successfully and normalize path
+        assert request.file_path == str(temp_file.resolve())
 
-    def test_validate_inputs_nonexistent_file(self):
+    def test_nonexistent_file_validation(self):
         """Test validation with non-existent file."""
-        request = ExtractTechSupportRequest(file_path="/nonexistent/file.txt")
+        with pytest.raises(ValidationError) as exc_info:
+            ExtractTechSupportRequest(file_path="/nonexistent/file.txt")
 
-        with pytest.raises(ValueError, match="does not exist"):
-            _validate_inputs(request)
+        error_str = str(exc_info.value)
+        assert "does not exist" in error_str
 
-    def test_validate_inputs_directory_instead_of_file(self, temp_dir):
+    def test_directory_instead_of_file_validation(self, temp_dir):
         """Test validation with directory instead of file."""
-        request = ExtractTechSupportRequest(file_path=str(temp_dir))
+        with pytest.raises(ValidationError) as exc_info:
+            ExtractTechSupportRequest(file_path=str(temp_dir))
 
-        with pytest.raises(ValueError, match="Expected a file"):
-            _validate_inputs(request)
+        error_str = str(exc_info.value)
+        assert "Expected a file" in error_str
 
-    def test_validate_inputs_valid_temp_dir(self, temp_file, temp_dir):
+    def test_valid_temp_dir_validation(self, temp_file, temp_dir):
         """Test validation with valid temp_dir."""
         request = ExtractTechSupportRequest(file_path=str(temp_file), temp_dir=str(temp_dir))
 
-        # Should not raise exception
-        _validate_inputs(request)
+        # Should create request successfully and normalize path
+        assert request.temp_dir == str(temp_dir.resolve())
 
-    def test_validate_inputs_temp_dir_is_file(self, temp_file):
+    def test_temp_dir_is_file_validation(self, temp_file):
         """Test validation when temp_dir points to a file."""
         # Create another file to use as invalid temp_dir
         temp_file2 = Path(tempfile.mktemp(suffix=".txt"))
         temp_file2.write_text("content")
 
         try:
-            request = ExtractTechSupportRequest(file_path=str(temp_file), temp_dir=str(temp_file2))
+            with pytest.raises(ValidationError) as exc_info:
+                ExtractTechSupportRequest(file_path=str(temp_file), temp_dir=str(temp_file2))
 
-            with pytest.raises(ValueError, match="exists but is not a directory"):
-                _validate_inputs(request)
+            error_str = str(exc_info.value)
+            assert "exists but is not a directory" in error_str
         finally:
             if temp_file2.exists():
                 temp_file2.unlink()
+
+    def test_temp_dir_none_allowed(self, temp_file):
+        """Test that temp_dir=None is allowed."""
+        request = ExtractTechSupportRequest(file_path=str(temp_file), temp_dir=None)
+        assert request.temp_dir is None
+
+    def test_path_normalization(self, temp_file):
+        """Test that paths are normalized to absolute paths."""
+        # Test with relative path to existing file
+        relative_path = Path(temp_file).name
+
+        # Change to parent directory so relative path works
+        import os
+
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(temp_file.parent)
+            request = ExtractTechSupportRequest(file_path=relative_path)
+
+            # Path should be normalized to absolute
+            assert Path(request.file_path).is_absolute()
+            assert request.file_path == str(temp_file.resolve())
+        finally:
+            os.chdir(original_cwd)
 
 
 class TestExtractTechSupport:
@@ -140,16 +142,13 @@ class TestExtractTechSupport:
             temp_file.unlink()
 
     def test_extract_tech_support_invalid_input(self):
-        """Test extract_tech_support with invalid input."""
-        request = ExtractTechSupportRequest(file_path="/nonexistent/file.txt")
+        """Test that invalid input is caught during model instantiation."""
+        # With Pydantic validation, invalid input raises ValidationError during model creation
+        with pytest.raises(ValidationError) as exc_info:
+            ExtractTechSupportRequest(file_path="/nonexistent/file.txt")
 
-        response = extract_tech_support(request)
-
-        assert isinstance(response, ExtractTechSupportResponse)
-        assert response.success is False
-        assert "does not exist" in response.error_message
-        assert response.extract_dir == ""
-        assert response.files == []
+        error_str = str(exc_info.value)
+        assert "does not exist" in error_str
 
     @patch("sonic_nos_mcp.modules.tech_support.tools.extract_tool.extract_file")
     def test_extract_tech_support_extraction_failure(self, mock_extract_file, temp_file):
@@ -243,8 +242,9 @@ class TestExtractTechSupport:
 
                 # Should pass temp_dir to extract_file (default remove_archives from request)
                 call_args = mock_extract.call_args
-                assert call_args[0][0] == str(temp_file)
-                assert call_args[0][1] == str(temp_dir)
+                # Compare normalized paths since Pydantic validators resolve symlinks
+                assert call_args[0][0] == str(Path(temp_file).resolve())
+                assert call_args[0][1] == str(Path(temp_dir).resolve())
                 # remove_archives comes from request (default False)
         finally:
             import shutil
@@ -266,7 +266,9 @@ class TestExtractTechSupport:
             extract_tech_support(request)
 
             # Should pass remove_archives=True to extract_file
-            mock_extract.assert_called_once_with(str(temp_file), None, remove_archives=True)
+            # Compare normalized paths since Pydantic validators resolve symlinks
+            expected_file_path = str(Path(temp_file).resolve())
+            mock_extract.assert_called_once_with(expected_file_path, None, remove_archives=True)
 
 
 if __name__ == "__main__":

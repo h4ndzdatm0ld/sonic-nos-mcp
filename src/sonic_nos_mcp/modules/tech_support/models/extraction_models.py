@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ExtractionResult(BaseModel):
@@ -35,6 +35,48 @@ class ExtractTechSupportRequest(BaseModel):
         True,
         description="Whether to remove archive files after extraction.",
     )
+
+    @field_validator("file_path")
+    @classmethod
+    def validate_file_path(cls, v: str) -> str:
+        """Validate that file_path exists and is a file.
+
+        Args:
+            v: The file path string to validate.
+
+        Returns:
+            str: Normalized absolute path if valid.
+
+        Raises:
+            ValueError: If file doesn't exist or is not a file.
+        """
+        path = Path(v).expanduser()
+        if not path.exists():
+            raise ValueError(f"Tech-support archive does not exist: {path}")
+        if not path.is_file():
+            raise ValueError(f"Expected a file for 'file_path', got: {path}")
+        return str(path.resolve())
+
+    @field_validator("temp_dir")
+    @classmethod
+    def validate_temp_dir(cls, v: Optional[str]) -> Optional[str]:
+        """Validate that temp_dir is a valid directory if provided.
+
+        Args:
+            v: The temp directory path string to validate, or None.
+
+        Returns:
+            Optional[str]: Normalized absolute path if valid, or None.
+
+        Raises:
+            ValueError: If temp_dir exists but is not a directory.
+        """
+        if v is None:
+            return v
+        path = Path(v).expanduser()
+        if path.exists() and not path.is_dir():
+            raise ValueError(f"Provided temp_dir exists but is not a directory: {path}")
+        return str(path.resolve()) if path.exists() else str(path)
 
 
 class ExtractTechSupportResponse(BaseModel):

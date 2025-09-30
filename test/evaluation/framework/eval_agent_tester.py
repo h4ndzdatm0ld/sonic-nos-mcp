@@ -5,20 +5,16 @@ Dataclass-based evaluation framework for testing SONiC analysis agents with LLM 
 
 import json
 import datetime
+import logging
 import re
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 
 import pytest
+from strands import Agent
 
-try:
-    from strands import Agent
-
-    STRANDS_AVAILABLE = True
-except ImportError:
-    Agent = None
-    STRANDS_AVAILABLE = False
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -86,6 +82,9 @@ class EvalAgentTester:
         results = []
         start_time = datetime.datetime.now()
 
+        logger.info(f"Starting evaluation of {agent_name} at {start_time}")
+        logger.info(f"Tech support file: {self.tech_support_file.name}")
+        logger.info(f"Test cases: {len(self.test_cases)}")
         print(f"🔍 Starting evaluation of {agent_name} at {start_time}")
         print(f"📁 Tech support file: {self.tech_support_file.name}")
         print(f"🧪 Test cases: {len(self.test_cases)}")
@@ -93,18 +92,18 @@ class EvalAgentTester:
         for case in self.test_cases:
             case_start = datetime.datetime.now()
 
-            # Execute agent query with tech support file context
+            logger.debug(f"Executing agent query for case {case.id} with tech support file context")
             full_query = f"{case.query}\n\nTech support file: {self.tech_support_file}"
             response = self.agent(full_query)
             case_duration = (datetime.datetime.now() - case_start).total_seconds()
 
-            # Extract tool usage from response
+            logger.debug(f"Extracting tool usage from response for case {case.id}")
             used_tools = self._extract_used_tools(response)
 
-            # LLM Judge evaluation with tool usage information
+            logger.debug(f"Running LLM judge evaluation for case {case.id} with tools: {used_tools}")
             judge_score, judge_feedback = self._llm_judge_evaluate(case, response, used_tools)
 
-            # Determine pass/fail based on LLM score and tool usage
+            logger.debug(f"Determining pass/fail status for case {case.id}: score={judge_score}, tools={used_tools}")
             passed = self._determine_pass_fail(case, judge_score, used_tools)
 
             result = EvaluationResult(
@@ -122,14 +121,17 @@ class EvalAgentTester:
 
             results.append(result)
 
-            # Progress indicator
+            logger.info(
+                f"Case {case.id} completed: passed={passed}, score={judge_score}/5, duration={case_duration:.1f}s"
+            )
             status_icon = "✅" if passed else "❌"
             print(f"{status_icon} {case.id}: Score {judge_score}/5 ({case_duration:.1f}s)")
 
         total_duration = (datetime.datetime.now() - start_time).total_seconds()
+        logger.info(f"Evaluation completed in {total_duration:.1f} seconds")
         print(f"🏁 Evaluation completed in {total_duration:.1f} seconds")
 
-        # Save results
+        logger.info(f"Saving evaluation results for {agent_name}")
         self._save_results(results, agent_name)
 
         return results
@@ -138,20 +140,24 @@ class EvalAgentTester:
         """Extract tools used from real Strands agent response metrics."""
         used_tools = []
 
-        # Strands AgentResult has metrics with tool_metrics dictionary
-        if hasattr(response, "metrics") and hasattr(response.metrics, "tool_metrics"):
-            for tool_name, tool_metric in response.metrics.tool_metrics.items():
-                if hasattr(tool_metric, "call_count") and tool_metric.call_count > 0:
-                    used_tools.append(tool_name)
+        logger.debug("Extracting tools from Strands agent response metrics")
+        tool_metrics = response.metrics.tool_metrics
 
+        for tool_name, tool_metric in tool_metrics.items():
+            if tool_metric.call_count > 0:
+                used_tools.append(tool_name)
+                logger.debug(f"Found tool usage: {tool_name} (calls: {tool_metric.call_count})")
+
+        logger.debug(f"Extracted {len(used_tools)} tools: {used_tools}")
         return used_tools
 
     def _llm_judge_evaluate(
         self, case: EvaluationCase, response, used_tools: Optional[List[str]] = None
     ) -> Tuple[int, str]:
         """Use real LLM judge agent to evaluate response quality for SONiC analysis."""
-        # Extract tool usage if not provided
+        logger.debug(f"Starting LLM judge evaluation for case {case.id}")
         if used_tools is None:
+            logger.debug("Tool usage not provided, extracting from response")
             used_tools = self._extract_used_tools(response)
 
         eval_prompt = f"""
@@ -199,41 +205,47 @@ class EvalAgentTester:
     def _parse_judge_response(self, evaluation_text: str) -> Tuple[int, str]:
         """Parse LLM judge response to extract score and feedback."""
         try:
-            # Extract score using regex
+            logger.debug("Parsing LLM judge response for score and feedback")
             score_match = re.search(r"SCORE:\s*(\d+)", evaluation_text)
             score = int(score_match.group(1)) if score_match else 3
+            logger.debug(f"Extracted score: {score}")
 
-            # Extract feedback
             feedback_match = re.search(r"FEEDBACK:\s*(.+)", evaluation_text, re.DOTALL)
             feedback = feedback_match.group(1).strip() if feedback_match else evaluation_text
 
-            # Ensure score is within valid range
+            logger.debug("Ensuring score is within valid range (1-5)")
             score = max(1, min(5, score))
 
+            logger.debug(f"Final parsed result: score={score}, feedback_length={len(feedback)}")
             return score, feedback
 
         except Exception as e:
+            logger.error(f"Error parsing judge response: {e}")
             print(f"⚠️  Error parsing judge response: {e}")
             return 3, f"Error parsing evaluation: {evaluation_text}"
 
     def _determine_pass_fail(self, case: EvaluationCase, judge_score: int, used_tools: List[str]) -> bool:
         """Determine if evaluation case passes based on score and tool usage."""
-        # Base pass threshold on LLM judge score
-        score_pass = judge_score >= 4  # Score of 4 or 5 is considered passing
+        logger.debug(f"Determining pass/fail for case {case.id}: score={judge_score}, tools={used_tools}")
+        score_pass = judge_score >= 4
+        logger.debug(f"Score pass threshold (>=4): {score_pass}")
 
-        # Check tool usage if expected tools are specified
         tool_pass = True
         if case.expected_tools:
-            # ALL expected tools must be used (strict requirement)
             expected_tools_used = all(tool in used_tools for tool in case.expected_tools)
             tool_pass = expected_tools_used
+            logger.debug(f"Tool validation - expected: {case.expected_tools}, used: {used_tools}, pass: {tool_pass}")
 
-            # Debug output for tool validation
             missing_tools = [tool for tool in case.expected_tools if tool not in used_tools]
             if missing_tools:
+                logger.warning(f"Missing required tools for case {case.id}: {missing_tools}")
                 print(f"⚠️  Missing required tools: {missing_tools}")
 
-        return score_pass and tool_pass
+        final_result = score_pass and tool_pass
+        logger.debug(
+            f"Final pass/fail result for case {case.id}: {final_result} (score_pass={score_pass}, tool_pass={tool_pass})"
+        )
+        return final_result
 
     def _save_results(self, results: List[EvaluationResult], agent_name: str):
         """Save evaluation results to JSON and CSV files."""
@@ -241,7 +253,7 @@ class EvalAgentTester:
 
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Save detailed results as JSON
+        logger.info(f"Saving detailed results as JSON for {len(results)} test cases")
         json_path = self.output_dir / f"{agent_name}_{timestamp}.json"
         results_data = [
             {
@@ -262,8 +274,9 @@ class EvalAgentTester:
 
         with open(json_path, "w") as f:
             json.dump(results_data, f, indent=2)
+        logger.debug(f"JSON results saved to: {json_path}")
 
-        # Save summary as CSV using built-in csv module
+        logger.info("Saving summary as CSV using built-in csv module")
         csv_path = self.output_dir / f"{agent_name}_{timestamp}_summary.csv"
         csv_data = [
             {
@@ -283,15 +296,19 @@ class EvalAgentTester:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
                 writer.writerows(csv_data)
+        logger.debug(f"CSV summary saved to: {csv_path}")
 
+        logger.info("Evaluation results saving completed successfully")
         print("📊 Results saved:")
         print(f"  JSON: {json_path}")
         print(f"  CSV:  {csv_path}")
 
     def calculate_metrics(self, results: List[EvaluationResult]) -> EvaluationMetrics:
         """Calculate aggregated metrics from evaluation results using basic Python."""
+        logger.debug(f"Calculating metrics for {len(results)} evaluation results")
+
         if not results:
-            # Return empty metrics if no results
+            logger.warning("No results provided, returning empty metrics")
             return EvaluationMetrics(
                 total_tests=0,
                 passed_tests=0,
@@ -307,27 +324,31 @@ class EvalAgentTester:
 
         passed_tests = sum(1 for r in results if r.passed)
         failed_tests = len(results) - passed_tests
+        logger.debug(f"Pass/fail breakdown: {passed_tests} passed, {failed_tests} failed")
 
-        # Calculate response time metrics
+        logger.debug("Calculating response time metrics")
         response_times = [r.response_time for r in results]
         avg_response_time = sum(response_times) / len(response_times)
         max_response_time = max(response_times)
 
-        # Calculate LLM score metrics
+        logger.debug("Calculating LLM score metrics")
         llm_scores = [r.llm_judge_score for r in results]
         avg_llm_score = sum(llm_scores) / len(llm_scores)
         min_llm_score = min(llm_scores)
         max_llm_score = max(llm_scores)
 
-        # Calculate categories
-        categories = {}
+        logger.debug("Calculating category distribution")
+        categories: Dict[str, int] = {}
         for r in results:
             categories[r.category] = categories.get(r.category, 0) + 1
 
-        # Calculate tool usage accuracy
+        logger.debug("Calculating tool usage accuracy")
         tool_cases = [r for r in results if r.used_tools]
         tool_accuracy = len(tool_cases) / len(results) if results else 0.0
 
+        logger.debug(
+            f"Metrics calculation completed: {passed_tests}/{len(results)} passed, avg_score={avg_llm_score:.1f}"
+        )
         return EvaluationMetrics(
             total_tests=len(results),
             passed_tests=passed_tests,
@@ -343,6 +364,7 @@ class EvalAgentTester:
 
     def generate_report(self, results: List[EvaluationResult], agent_name: str) -> str:
         """Generate comprehensive evaluation report."""
+        logger.info(f"Generating comprehensive evaluation report for {agent_name}")
         metrics = self.calculate_metrics(results)
 
         report = f"""
@@ -371,21 +393,24 @@ class EvalAgentTester:
             category_passed = sum(1 for r in category_results if r.passed)
             report += f"- **{category}**: {category_passed}/{count} passed ({category_passed / count * 100:.1f}%)\n"
 
-        # Failed tests details
+        logger.debug("Adding failed tests details to report")
         failed_tests = [r for r in results if not r.passed]
         if failed_tests:
+            logger.debug(f"Found {len(failed_tests)} failed tests to include in report")
             report += "\n## ❌ Failed Tests\n"
             for result in failed_tests:
                 report += f"- **{result.test_id}**: Score {result.llm_judge_score}/5 - {result.llm_judge_feedback}\n"
 
+        logger.debug(f"Report generation completed, report length: {len(report)} characters")
         return report
 
     def pytest_assert_results(self, results: List[EvaluationResult]):
         """Convert evaluation results to pytest assertions."""
+        logger.info(f"Converting evaluation results to pytest assertions for {len(results)} test cases")
         metrics = self.calculate_metrics(results)
         failed_cases = [r for r in results if not r.passed]
 
-        # Print summary for test output
+        logger.info(f"Printing test summary: {metrics.passed_tests}/{metrics.total_tests} passed")
         print("\n📊 Evaluation Summary:")
         print(
             f"   Passed: {metrics.passed_tests}/{metrics.total_tests} ({metrics.passed_tests / metrics.total_tests * 100:.1f}%)"
@@ -394,6 +419,7 @@ class EvalAgentTester:
         print(f"   Avg Response: {metrics.avg_response_time:.1f}s")
 
         if failed_cases:
+            logger.error(f"Found {len(failed_cases)} failed test cases, preparing pytest failure")
             failure_details = []
             for case in failed_cases:
                 tools_info = f"Tools: {case.used_tools}" if case.used_tools else "No tools used"
@@ -402,6 +428,8 @@ class EvalAgentTester:
                 )
 
             failure_summary = "\n".join(failure_details)
+            logger.error(f"Failing pytest with summary of {len(failed_cases)} failed cases")
             pytest.fail(f"\n🚨 Evaluation failed for {len(failed_cases)} test cases:\n\n{failure_summary}")
 
+        logger.info(f"All {len(results)} evaluation cases passed successfully")
         print(f"✅ All {len(results)} evaluation cases passed!")

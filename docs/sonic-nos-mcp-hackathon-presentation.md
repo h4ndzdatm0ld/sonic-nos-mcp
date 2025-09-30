@@ -2,17 +2,18 @@
 theme: gaia
 _class: lead
 paginate: true
+marp: true
 backgroundColor: #fff
 backgroundImage: url('https://marp.app/assets/hero-background.svg')
 ---
 
-![bg left:40% 80%](https://raw.githubusercontent.com/sonic-net/SONiC/master/doc/logo/sonic-logo.png)
+![bg left:40%](./images/sonic.jpg)
 
 # **SONiC NOS MCP Server**
 ### AI-Powered Network Analysis for the Modern Era
 
 **Team @htinoco from Amazon**
-SONIC Hackathon 2024
+SONIC Hackathon 2025
 
 ---
 
@@ -171,7 +172,7 @@ uv sync
 
 ### Option 2: Docker Production
 ```bash
-docker pull h4ndzdatm0ld/sonic-nos-mcp:latest
+docker pull ghcr.io/h4ndzdatm0ld/sonic-nos-mcp:latest
 ```
 
 ### MCP Client Configuration
@@ -275,6 +276,29 @@ result = analyze_sonic_issue(
 
 ---
 
+# 🔄 **CI/CD Pipeline & Automation**
+
+### **Production-Grade Quality Gates**
+✅ **Code Quality**: Ruff formatting + linting with auto-fix
+✅ **Type Safety**: MyPy static type checking (100% coverage)
+✅ **Test Coverage**: 90%+ requirement across unit & integration tests
+✅ **Security Scanning**: Bandit static analysis + Safety vulnerability checks
+✅ **Docker Quality Gates**: Multi-stage builds with embedded validation
+
+### **GitHub Actions Workflows**
+```yaml
+# Runs on ALL branches for testing
+- Quality Gates: Ruff → MyPy → Tests + Coverage
+- Test Matrix: Python 3.11, 3.12, 3.13 cross-validation
+- Docker Build: Quality gate validation + container testing
+- Security Scan: Bandit + Safety automated vulnerability detection
+```
+
+### **GitHub Container Registry**
+📦 **ghcr.io/h4ndzdatm0ld/sonic-nos-mcp:branch-name** - Every branch published for testing
+
+---
+
 # 🎪 **Demo Time**
 
 ### Live Analysis Scenarios
@@ -322,7 +346,7 @@ result = analyze_sonic_issue(
 ## **Questions & Discussion**
 
 ### Team @htinoco from Amazon
-#### SONIC Hackathon 2024
+#### SONIC Hackathon 2025
 
 **Ready to revolutionize SONiC network analysis with AI** 🚀
 
