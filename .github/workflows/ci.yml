@@ -36,11 +36,8 @@ jobs:
           uv run ruff check --fix src/ test/
           uv run mypy src/
 
-      - name: Run unit tests
-        run: uv run python -m pytest test/unit/ -v --cov-report=xml --cov-report=term
-
-      - name: Run integration tests
-        run: uv run python -m pytest test/integration/ -v
+      - name: Run all tests with coverage
+        run: uv run python -m pytest -v --cov-report=xml --cov-report=term --cov-fail-under=90
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
