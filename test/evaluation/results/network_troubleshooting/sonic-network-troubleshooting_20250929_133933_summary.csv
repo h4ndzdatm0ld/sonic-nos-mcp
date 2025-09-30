@@ -1,0 +1,6 @@
+test_id,category,passed,score,response_time,tools_used_count,expected_tools_match,pattern_match
+sonic-network-001,interface_analysis,False,,5e-05,1,False,True
+sonic-network-002,bgp_routing,False,,2.5e-05,1,False,True
+sonic-network-003,log_analysis,False,,2.4e-05,2,False,True
+sonic-network-004,configuration_review,False,,2.1e-05,1,False,True
+sonic-network-005,connectivity_diagnosis,False,,2.2e-05,1,False,True

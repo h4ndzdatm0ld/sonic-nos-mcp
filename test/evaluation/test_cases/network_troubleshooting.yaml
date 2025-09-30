@@ -1,0 +1,16 @@
+# Network Troubleshooting Test Cases
+# Tests SONiC network analysis and diagnostic capabilities
+
+test_cases:
+  - id: "sonic-network-001"
+    category: "bgp_routing"
+    tech_support_file: "test/data/techsupport/techsupport_bgp_md5.tar.gz"
+    query: "Analyze the failing BGP session and find what the problem is. Use the SONiC NOS MCP server tools and access the MCP sonic tech support guide resource to deep dive the issue and identify the root cause of the BGP connectivity failure."
+    expected: "Root cause analysis of BGP session failure with detailed diagnosis"
+    expected_tools: ["extract_tech_support_file", "read_tech_support_file"]
+    expected_patterns: ["BGP", "neighbor", "authentication", "MD5", "failed", "error", "down", "idle", "wrongpw"]
+    context:
+      protocol: "bgp"
+      search_patterns: ["bgp", "neighbor", "route", "authentication", "md5", "error"]
+      analysis_focus: "BGP session failure root cause analysis"
+      expected_resources: ["sonic://tech-support-guide"]

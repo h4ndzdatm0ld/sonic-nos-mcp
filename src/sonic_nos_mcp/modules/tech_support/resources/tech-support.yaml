@@ -1,0 +1,322 @@
+# SONiC Tech Support MCP Analysis Guide Resource
+resource_id: "sonic://tech-support-guide"
+title: "SONiC Tech Support MCP Analysis Guide"
+description: "Comprehensive guide for analyzing SONiC network device tech support files using MCP server tools"
+version: "2.0.0"
+author: "SONiC"
+
+content: |
+
+  # SONiC Tech Support Analysis with MCP Tools
+
+  ## Overview
+
+  This guide demonstrates how to analyze SONiC tech support files using the MCP server's powerful tools instead of manual bash commands. The MCP server provides three main tools that replace traditional shell-based analysis:
+
+  1. **`extract_tech_support_file`** - Automatically extracts archives and returns file listings
+  2. **`list_tech_support_files_tool`** - Intelligent file discovery with glob patterns
+  3. **`read_tech_support_file`** - Regex-based content extraction with chunking and pagination
+
+  ## What are SONiC Tech Support Files
+
+  SONiC tech support files are comprehensive diagnostic bundles (`.tar.gz` archives) that capture the complete state of a SONiC network device at a specific point in time. These files contain:
+
+  * System configuration from all databases (CONFIG_DB, STATE_DB, ASIC_DB)
+  * Operational state and health information
+  * Hardware sensor readings and status data
+  * Log files from all containers and services
+  * Network state including routing and switching tables
+  * Process and system resource utilization
+
+  ## MCP Tool Workflow Patterns
+
+  ### 1. Archive Extraction and Discovery
+
+  **Start every analysis by extracting the archive:**
+
+  ```
+  extract_tech_support_file(file_path="path/to/techsupport.tar.gz")
+  ```
+
+  **Returns:**
+  - `extract_dir`: Path to extracted files
+  - `files`: Complete list of all files in the archive
+  - `success`: Boolean indicating extraction success
+
+  **Follow up with targeted file discovery:**
+
+  ```
+  # Find all JSON database files
+  list_tech_support_files_tool(extract_dir="/tmp/extracted", pattern="*.json")
+
+  # Find all files in dump directory
+  list_tech_support_files_tool(extract_dir="/tmp/extracted", pattern="dump/*")
+
+  # Find all log files
+  list_tech_support_files_tool(extract_dir="/tmp/extracted", pattern="*log*")
+
+  # Find network-related files
+  list_tech_support_files_tool(extract_dir="/tmp/extracted", pattern="*interface*")
+  ```
+
+  ### 2. Database Analysis with Pattern Matching
+
+  **CONFIG_DB Analysis (System Configuration):**
+  - `dump/CONFIG_DB.json: DEVICE_METADATA.*localhost` - Device metadata and platform information
+  - `dump/CONFIG_DB.json: PORT.*Ethernet16|BREAKOUT_CFG.*Ethernet16` - Specific interface configurations
+  - `dump/CONFIG_DB.json: VLAN.*|VLAN_MEMBER.*` - VLAN configurations
+  - `dump/CONFIG_DB.json: BGP_NEIGHBOR.*` - BGP neighbor configurations
+
+  **STATE_DB Analysis (Operational State):**
+  - `dump/STATE_DB.json: SYSTEM_HEALTH_INFO.*` - System health overview
+  - `dump/STATE_DB.json: PORT_TABLE.*Ethernet16` - Interface operational status
+  - `dump/STATE_DB.json: PSU_INFO.*|FAN_INFO.*|TEMPERATURE_INFO.*` - Hardware component status
+  - `dump/STATE_DB.json: ALL_SERVICE_STATUS.*` - Service health status
+
+  ### 3. Log Analysis with Compressed File Support
+
+  **The MCP tools automatically handle compressed (.gz) files:**
+  - `log/swss.rec.gz: Ethernet16.*|STP.*|VLAN.*` - Critical SWSS state changes
+  - `log/sairedis.rec.gz: PORT.*|DOWN.*|BLOCK.*` - SAI hardware API calls
+  - `log/syslog.gz: (?i)\b(critical|fatal|panic|oops)\b.*` - System log analysis (OPTIMIZED)
+  - `log/bgpd.log.gz: (?i)(auth.*fail|password.*mismatch|inactive)` - BGP daemon logs
+
+  ### 4. System Information Files
+
+  **Use simple reads for formatted status files:**
+  - `dump/interface.status` - Interface status table
+  - `dump/version` - SONiC version and platform info
+  - `dump/docker.ps` - Container status
+  - `dump/top` - Process information
+  - `dump/sensors` - Hardware sensor readings
+
+  ## Troubleshooting Scenarios with MCP Tools
+
+  ### Scenario 1: Interface Connectivity Issues
+
+  **Systematic interface analysis workflow:**
+
+  ```
+  # Step 1: Extract the archive
+  extract_tech_support_file(file_path="techsupport.tar.gz")
+
+  # Step 2: Check interface administrative and operational status
+  dump/interface.status: Ethernet16
+
+  # Step 3: Verify intended configuration in CONFIG_DB
+  dump/CONFIG_DB.json: PORT.*Ethernet16.*|BREAKOUT_CFG.*Ethernet16
+
+  # Step 4: Check operational details in STATE_DB
+  dump/STATE_DB.json: PORT_TABLE.*Ethernet16
+
+  # Step 5: Examine error counters and statistics
+  dump/COUNTERS_DB.json: Ethernet16.*(error|drop|discard)
+
+  # Step 6: Review recent state changes in SWSS logs
+  log/swss.rec.gz: Ethernet16.*(UP|DOWN|BLOCK|LEARN|FORWARD)
+  ```
+
+  ### Scenario 2: BGP Session Troubleshooting
+
+  **BGP neighbor investigation workflow:**
+
+  ```
+  # Step 1: Extract the archive
+  extract_tech_support_file(file_path="techsupport.tar.gz")
+
+  # Step 2: Check BGP neighbor status
+  dump/bgp.summary: 10\.255\.0\.2.*
+
+  # Step 3: Examine BGP configuration for authentication
+  dump/CONFIG_DB.json: BGP_NEIGHBOR.*10\.255\.0\.2.*auth.*md5
+
+  # Step 4: Check BGP daemon logs for session issues
+  log/bgpd.log.gz: 10\.255\.0\.2.*(password.*mismatch|auth.*fail|Inactive)
+
+  # Step 5: Look for relevant system log entries
+  log/syslog.gz: bgp.*10\.255\.0\.2.*(Connect|Active|auth)
+  ```
+
+  ### Scenario 3: Hardware Health Assessment
+
+  **Complete hardware health analysis:**
+
+  ```
+  # Step 1: Extract the archive
+  extract_tech_support_file(file_path="techsupport.tar.gz")
+
+  # Step 2: Check overall system health summary
+  dump/STATE_DB.json: SYSTEM_HEALTH_INFO.*
+
+  # Step 3: Examine individual hardware components
+  dump/STATE_DB.json: PSU_INFO.*|FAN_INFO.*|TEMPERATURE_INFO.*
+
+  # Step 4: Get current sensor readings
+  dump/sensors
+
+  # Step 5: Check for hardware alerts in system logs
+  log/syslog.gz: (?i)(hardware|psu|fan|temperature|thermal).*(error|fail|critical|alert)
+  ```
+
+  ### Scenario 4: Container/Service Health Issues
+
+  **Service and container analysis workflow:**
+
+  ```
+  # Step 1: Extract the archive
+  extract_tech_support_file(file_path="techsupport.tar.gz")
+
+  # Step 2: Check container status and uptime
+  dump/docker.ps: syncd.*
+
+  # Step 3: Review service health status
+  dump/STATE_DB.json: ALL_SERVICE_STATUS.*syncd
+
+  # Step 4: Check for container crash/restart events
+  log/syslog.gz: syncd.*(exit|crash|kill|restart)
+
+  # Step 5: Examine container resource usage
+  dump/docker.stats: syncd.*
+  ```
+
+  ### Scenario 5: Memory Exhaustion Analysis
+
+  **System resource and memory pressure investigation:**
+
+  ```
+  # Step 1: Extract the archive
+  extract_tech_support_file(file_path="techsupport.tar.gz")
+
+  # Step 2: Check reboot history for unusual patterns
+  dump/reboot.cause.history: Unknown.*15:5[2-9]|16:0[0-1]
+
+  # Step 3: Look for unclean container termination evidence (ROOT CAUSE)
+  log/syslog: systemd.*service.*left-over process
+
+  # Step 4: Check OOM handling configuration
+  etc/sysctl.conf: vm\.panic_on_oom.*
+
+  # Step 5: Examine container resource usage
+  dump/docker.stats: .*
+
+  # Step 6: Check for memory pressure indicators
+  dump/free
+
+  # Step 7: Look for warm-start evidence after reboot
+  log/syslog.1.gz: (?i)(warm.*start|port.*init)
+  ```
+
+  ## Advanced Pattern Matching Techniques
+
+  ### Regex Pattern Examples for Common Searches
+
+  **Interface-related patterns:**
+  ```
+  # Any interface with errors
+  "Ethernet.*\d+.*(error|drop|discard)"
+
+  # Specific interface state changes
+  "Ethernet16.*(UP|DOWN|BLOCK|LEARN|FORWARD)"
+
+  # Interface configuration entries
+  "PORT.*Ethernet\d+|BREAKOUT_CFG.*Ethernet\d+"
+  ```
+
+  **BGP and routing patterns:**
+  ```
+  # BGP neighbor issues
+  "BGP_NEIGHBOR.*\d+\.\d+\.\d+\.\d+.*(auth|md5|password)"
+
+  # BGP session states
+  "\d+\.\d+\.\d+\.\d+.*(Established|Active|Connect|Idle)"
+
+  # Route table analysis
+  "ROUTE_TABLE.*\d+\.\d+\.\d+\.\d+"
+  ```
+
+  **Hardware health patterns:**
+  ```
+  # Temperature and thermal issues
+  "(?i)(temperature|thermal).*(critical|high|overheat)"
+
+  # Power supply issues
+  "PSU.*\d+.*(fail|error|absent|unplugged)"
+
+  # Fan status issues
+  "FAN.*\d+.*(fail|error|absent|speed)"
+  ```
+
+  **System and service patterns:**
+  ```
+  # Container crashes and restarts
+  "(docker|container).*(exit|crash|kill|restart)"
+
+  # Service health issues
+  "ALL_SERVICE_STATUS.*(fail|error|inactive|stopped)"
+
+  # Memory and resource issues - FIXED PATTERN
+  "(?i)\b(oom-kill|out of memory|memory exhausted|killed process)\b.*"
+  ```
+
+  **AVOID these problematic patterns:**
+  ```
+  # PROBLEMATIC - Returns excessive results
+  "(?i)(error|critical|fail).*"
+  "(?i)(oom|out.*memory|killed.*memory)"
+  ```
+
+  ## Cross-File Correlation Techniques
+
+  ### Multi-File Analysis Workflow
+
+  **For comprehensive interface analysis:**
+  ```
+  # 1. Get interface configuration intent
+  dump/CONFIG_DB.json: PORT.*Ethernet16.*speed|admin_status
+
+  # 2. Check current operational state
+  dump/STATE_DB.json: PORT_TABLE.*Ethernet16.*oper_status
+
+  # 3. Verify interface statistics
+  dump/interface.status: Ethernet16
+
+  # 4. Check for recent state changes
+  log/swss.rec.gz: Ethernet16.*(state|status|link)
+  ```
+
+  ## File Priority Guide
+
+  ### Critical Files for Initial Assessment
+  1. **`dump/version`** - Platform and SONiC version information
+  2. **`dump/interface.status`** - Interface operational overview
+  3. **`dump/docker.ps`** - Container health status
+  4. **`dump/CONFIG_DB.json`** - System configuration (use patterns)
+  5. **`dump/STATE_DB.json`** - Operational state (use patterns)
+
+  ### Important Log Files
+  1. **`log/swss.rec.gz`** - Network state changes (most critical)
+  2. **`log/sairedis.rec.gz`** - Hardware API calls
+  3. **`log/syslog.gz`** - System events and errors
+  4. **`log/bgpd.log.gz`** - BGP routing events
+  5. **Service-specific logs** - Target based on scenario
+
+  ### Hardware and Performance Files
+  1. **`dump/sensors`** - Hardware sensor readings
+  2. **`dump/top`** - Process resource usage snapshot
+  3. **`dump/free`** - Memory utilization
+  4. **`dump/docker.stats`** - Container resource usage
+
+  ## Error Handling and Troubleshooting
+
+  ### Tool Response Handling
+  - Always check the `success` field in tool responses
+  - Review `error_message` if `success` is `false`
+  - Use `matches` array to see regex pattern results
+  - Check `total_pages` for pagination requirements
+
+  ### Common Issues and Solutions
+  - **Pattern not matching**: Verify regex syntax and test with simpler patterns
+  - **File not found**: Use `list_tech_support_files_tool` to verify file paths
+  - **Large file handling**: Use pagination or more specific patterns
+  - **Extraction failure**: Check archive format and file permissions
+  - **Too many results**: Use more specific patterns with word boundaries

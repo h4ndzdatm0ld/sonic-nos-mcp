@@ -1,0 +1,99 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sonic-nos-mcp"
+version = "1.0.0"
+description = "SONiC Network Operating System MCP Server. Collection of tools for SONiC."
+readme = "README.md"
+authors = [
+    { name = "Hugo Tinoco", email = "hugotinoco@icloud.com" }
+]
+requires-python = ">=3.11"
+dependencies = [
+    "mcp[cli]>=1.6.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0.0",
+    "strands-agents>=1.10.0",
+    "ruff>=0.11.4",
+    "mypy>=1.0.0",
+    "types-PyYAML>=6.0.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "bandit>=1.7.0",
+    "safety>=3.0.0",
+]
+
+[project.scripts]
+sonic-nos-mcp = "sonic_nos_mcp.server:main"
+
+[tool.hatch.envs.default]
+python = "3.12"
+dependencies = [
+    "black>=24.0.0",
+    "pre-commit>=3.0.0",
+]
+
+[tool.hatch.envs.default.scripts]
+format = [
+  "ruff format src/ test/",
+  "ruff check --fix src/ test/",
+  "mypy src/"
+]
+
+[tool.hatch.envs.test]
+dependencies = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.5",
+    "pytest-cov>=4.1.0",
+    "strands-agents>=1.9.1",
+    "strands-agents-tools>=0.1.0",
+    "types-PyYAML>=6.0.0",
+    "pandas-stubs>=2.0.0",
+]
+
+[tool.pytest.ini_options]
+addopts = "--durations=5 --color=yes --cov --cov-report=term --cov-report=html --cov-report=xml"
+testpaths = [ "test" ]
+markers = [
+    "evaluation: marks tests as evaluation tests (require EXECUTE_EVALUATIONS=true)",
+]
+
+[tool.coverage.run]
+source_pkgs = ["sonic_nos_mcp"]
+branch = true
+parallel = true
+
+[tool.coverage.paths]
+"sonic_nos_mcp" = ["src/sonic_nos_mcp", "**/site-packages/sonic_nos_mcp"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+show_missing = true
+fail_under = 90
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+isort.known-first-party = ["sonic_nos_mcp"]
+exclude = [ "./build", ".hatch" ]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"test/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.black]
+line-length = 120
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/sonic_nos_mcp"]
+
+[tool.isort]
+profile = "black"
+line_length = 120

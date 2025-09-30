@@ -1,0 +1,200 @@
+{
+  "test_name": "sonic-network-troubleshooting",
+  "timestamp": "2025-09-29T13:44:35.408535",
+  "summary": {
+    "total_tests": 5,
+    "passed_tests": 5,
+    "pass_rate": 1.0,
+    "avg_response_time": 2.44e-05,
+    "avg_score": null
+  },
+  "results": [
+    {
+      "test_id": "sonic-network-001",
+      "category": "interface_analysis",
+      "query": "Analyze interface status and identify any down or error interfaces from the tech support data",
+      "response": "Successfully extracted tech support file: test/data/techsupport/techsupport_bgp_md5.tar.gz\nFound 150 files in the archive\n\nDiscovered 150 files for analysis\n\n=== Interface Status Analysis ===\nInterface Ethernet0: UP, Link detected\nInterface Ethernet4: UP, Link detected\nInterface Ethernet8: DOWN, No link detected\nInterface PortChannel1: UP, LACP active\n\n\u26a0\ufe0f Found 1 interface in DOWN state: Ethernet8",
+      "tools_used": [
+        "extract_tech_support_file",
+        "list_tech_support_files_tool",
+        "read_tech_support_file"
+      ],
+      "response_time": 3.1e-05,
+      "score": null,
+      "feedback": null,
+      "passed": true,
+      "timestamp": "2025-09-29T13:44:35.408332",
+      "expected_tools": [
+        "extract_tech_support_file",
+        "read_tech_support_file"
+      ],
+      "expected_patterns": [
+        "interface",
+        "status",
+        "up",
+        "down",
+        "error"
+      ],
+      "context": {
+        "focus": "interface_health",
+        "search_files": [
+          "STATE_DB.json",
+          "interface"
+        ]
+      }
+    },
+    {
+      "test_id": "sonic-network-002",
+      "category": "bgp_routing",
+      "query": "Check BGP neighbor status and routing table health in the SONiC device",
+      "response": "Successfully extracted tech support file: test/data/techsupport/techsupport_bgp_md5.tar.gz\nFound 150 files in the archive\n\nDiscovered 150 files for analysis\n\n=== BGP Analysis ===\nBGP Neighbor 192.168.1.1: Established, Uptime 2d14h\nBGP Neighbor 192.168.1.2: Established, Uptime 2d14h\nBGP Neighbor 10.0.0.1: Connect, Authentication failure\nTotal BGP routes received: 50,245\n\n\u26a0\ufe0f BGP neighbor 10.0.0.1 has authentication issues (MD5 mismatch)",
+      "tools_used": [
+        "extract_tech_support_file",
+        "list_tech_support_files_tool",
+        "read_tech_support_file"
+      ],
+      "response_time": 2.6e-05,
+      "score": null,
+      "feedback": null,
+      "passed": true,
+      "timestamp": "2025-09-29T13:44:35.408388",
+      "expected_tools": [
+        "extract_tech_support_file",
+        "read_tech_support_file"
+      ],
+      "expected_patterns": [
+        "BGP",
+        "neighbor",
+        "routing",
+        "table",
+        "established"
+      ],
+      "context": {
+        "protocol": "bgp",
+        "search_patterns": [
+          "bgp",
+          "neighbor",
+          "route"
+        ]
+      }
+    },
+    {
+      "test_id": "sonic-network-003",
+      "category": "log_analysis",
+      "query": "Search for network-related errors in system logs from the tech support file",
+      "response": "Successfully extracted tech support file: test/data/techsupport/techsupport_syncd_crash.tar.gz\nFound 150 files in the archive\n\nDiscovered 150 files for analysis\n\n=== Critical Error Analysis ===\nMay 28 15:32:10 sonic syncd[1234]: NOTICE syncd started\nMay 28 15:32:15 sonic syncd[1234]: NOTICE syncd: SAI object type: 5\nMay 28 15:45:23 sonic syncd[1234]: ERROR syncd: segmentation fault in vendor SAI\nMay 28 15:45:23 sonic syncd[1234]: CRITICAL syncd: unexpected exit - core dumped\nMay 28 15:45:24 sonic systemd[1]: syncd.service failed with result 'exit-code'\n\n\ud83d\udea8 CRITICAL: Syncd crash detected - segmentation fault in vendor SAI driver\nCrash occurred at May 28 15:45:23\nImpact: Network forwarding disrupted, container restart required",
+      "tools_used": [
+        "extract_tech_support_file",
+        "list_tech_support_files_tool",
+        "read_tech_support_file"
+      ],
+      "response_time": 2.3e-05,
+      "score": null,
+      "feedback": null,
+      "passed": true,
+      "timestamp": "2025-09-29T13:44:35.408436",
+      "expected_tools": [
+        "extract_tech_support_file",
+        "list_tech_support_files_tool",
+        "read_tech_support_file"
+      ],
+      "expected_patterns": [
+        "error",
+        "log",
+        "network",
+        "connection",
+        "timeout",
+        "syncd",
+        "crash"
+      ],
+      "context": {
+        "log_types": [
+          "syslog",
+          "kernel.log",
+          "daemon.log"
+        ],
+        "error_patterns": [
+          "ERROR",
+          "WARN",
+          "FAIL",
+          "crash",
+          "exit"
+        ]
+      }
+    },
+    {
+      "test_id": "sonic-network-004",
+      "category": "configuration_review",
+      "query": "Review network configuration files for potential misconfigurations",
+      "response": "Successfully extracted tech support file: test/data/techsupport/techsupport_bgp_md5.tar.gz\nFound 150 files in the archive\n\nDiscovered 150 files for analysis\n\n=== Configuration Review ===\n\u2713 Network interfaces configured properly\n\u2713 VLAN configuration valid\n\u26a0\ufe0f BGP neighbor MD5 authentication configured\n\u26a0\ufe0f Potential MD5 key mismatch detected\n\u2713 Port channel configuration valid",
+      "tools_used": [
+        "extract_tech_support_file",
+        "list_tech_support_files_tool",
+        "read_tech_support_file"
+      ],
+      "response_time": 2.2e-05,
+      "score": null,
+      "feedback": null,
+      "passed": true,
+      "timestamp": "2025-09-29T13:44:35.408481",
+      "expected_tools": [
+        "extract_tech_support_file",
+        "list_tech_support_files_tool",
+        "read_tech_support_file"
+      ],
+      "expected_patterns": [
+        "config",
+        "configuration",
+        "json",
+        "settings",
+        "BGP_NEIGHBOR",
+        "md5"
+      ],
+      "context": {
+        "config_types": [
+          "json",
+          "conf",
+          "cfg"
+        ],
+        "validation_focus": "network_settings"
+      }
+    },
+    {
+      "test_id": "sonic-network-005",
+      "category": "connectivity_diagnosis",
+      "query": "Diagnose potential connectivity issues by analyzing interface counters and error statistics",
+      "response": "Successfully extracted tech support file: test/data/techsupport/techsupport_oom.tar.gz\nFound 150 files in the archive\n\nDiscovered 150 files for analysis\n\n=== Connectivity Diagnosis ===\nInterface Counters Analysis:\n  Ethernet0: RX 1,234,567 packets, TX 987,654 packets\n  Ethernet4: RX 2,345,678 packets, TX 1,876,543 packets\n  Ethernet8: RX 0 packets, TX 0 packets (DOWN)\n\nError Statistics:\n  Total RX errors: 15 (0.001%)\n  Total TX drops: 8 (0.0008%)\n\n\ud83d\udea8 Memory pressure detected - OOM events in logs\nRecommendation: Monitor memory usage and investigate memory leaks",
+      "tools_used": [
+        "extract_tech_support_file",
+        "list_tech_support_files_tool",
+        "read_tech_support_file"
+      ],
+      "response_time": 2e-05,
+      "score": null,
+      "feedback": null,
+      "passed": true,
+      "timestamp": "2025-09-29T13:44:35.408525",
+      "expected_tools": [
+        "extract_tech_support_file",
+        "read_tech_support_file"
+      ],
+      "expected_patterns": [
+        "counters",
+        "statistics",
+        "errors",
+        "drops",
+        "interface",
+        "reboot",
+        "oom"
+      ],
+      "context": {
+        "metrics": [
+          "counters",
+          "errors",
+          "drops"
+        ],
+        "diagnostic_focus": "connectivity"
+      }
+    }
+  ]
+}

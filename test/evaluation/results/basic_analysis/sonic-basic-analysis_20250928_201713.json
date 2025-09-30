@@ -1,0 +1,18 @@
+[
+  {
+    "test_id": "sonic-basic-002",
+    "category": "file_navigation",
+    "query": "List all JSON configuration files in the tech support bundle. Do not show me anything else.",
+    "expected": "List of JSON files with paths and descriptions",
+    "actual": "**JSON Configuration Files:**\n\n- sonic_dump_sonic1_20250928_145726/dump/COUNTERS_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/FLEX_COUNTER_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/APPL_STATE_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/COUNTERS_DB_2.json\n- sonic_dump_sonic1_20250928_145726/dump/COUNTERS_DB_1.json\n- sonic_dump_sonic1_20250928_145726/dump/ASIC_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/CONFIG_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/APPL_DB.json\n- sonic_dump_sonic1_20250928_145726/dump/STATE_DB.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/copp_cfg.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/core_analyzer.rc.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/init_cfg.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/config_db.json\n- sonic_dump_sonic1_20250928_145726/etc/sonic/default_users.json\n",
+    "response_time": 14.950191,
+    "used_tools": [
+      "extract_tech_support_file",
+      "list_tech_support_files_tool"
+    ],
+    "llm_judge_score": 5,
+    "llm_judge_feedback": "This response is excellent and perfectly fulfills the specific request. The agent was asked to \"List all JSON configuration files in the tech support bundle. Do not show me anything else.\" The response does exactly that - it provides a clean, comprehensive list of all JSON files with their full paths, nothing more, nothing less.\n\nAccuracy: The list appears complete and accurate, covering both database dumps (COUNTERS_DB.json, CONFIG_DB.json, APPL_DB.json, etc.) and configuration files (copp_cfg.json, init_cfg.json, etc.).\n\nRelevance: Perfect adherence to the query constraints. The agent respected the explicit instruction \"Do not show me anything else\" by providing only the requested list without additional descriptions, explanations, or analysis.\n\nCompleteness: Complete for what was requested - a comprehensive list of JSON files.\n\nTool Usage: Appropriate use of both tools - 'extract_tech_support_file' was necessary to access the bundle contents, and 'list_tech_support_files_tool' was used as expected to identify the files. The additional tool usage was justified and necessary.\n\nThe response demonstrates good restraint by not adding unrequested information while still being thorough in identifying all relevant JSON files.",
+    "passed": true,
+    "timestamp": "2025-09-28T20:17:13.384997"
+  }
+]

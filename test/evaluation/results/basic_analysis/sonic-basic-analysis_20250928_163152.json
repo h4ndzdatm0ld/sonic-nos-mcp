@@ -1,0 +1,18 @@
+[
+  {
+    "test_id": "sonic-basic-002",
+    "category": "file_navigation",
+    "query": "List all JSON configuration files in the tech support bundle. Do not show me anything else.",
+    "expected": "List of JSON files with paths and descriptions",
+    "actual": "**JSON Configuration Files:**\n\n- `sonic_dump_sonic_20250927_164055/dump/CONFIG_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/STATE_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/APPL_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/APPL_STATE_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/ASIC_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB_1.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB_2.json`\n- `sonic_dump_sonic_20250927_164055/dump/FLEX_COUNTER_DB.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/config_db.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/init_cfg.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/copp_cfg.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/core_analyzer.rc.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/default_users.json`\n",
+    "response_time": 14.603837,
+    "used_tools": [
+      "extract_tech_support_file",
+      "list_tech_support_files_tool"
+    ],
+    "llm_judge_score": 5,
+    "llm_judge_feedback": "This response is excellent and deserves the highest score. The agent perfectly executed the specific request by providing a clean, comprehensive list of all JSON configuration files found in the tech support bundle. The response demonstrates:\n\n1. **Perfect Accuracy**: All listed files are legitimate SONiC JSON configuration files, including both database dumps (CONFIG_DB.json, STATE_DB.json, etc.) and system configuration files (config_db.json, init_cfg.json, etc.).\n\n2. **Exact Relevance**: The agent strictly adhered to the query constraints, showing \"Do not show me anything else\" by providing only the requested list without any additional descriptions, explanations, or commentary.\n\n3. **Complete Coverage**: The response includes all major SONiC JSON configuration files one would expect in a tech support bundle - database dumps, system configs, and specialized configuration files.\n\n4. **Appropriate Tool Usage**: The agent correctly used both necessary tools - `extract_tech_support_file` (to access the bundle contents) followed by `list_tech_support_files_tool` (to identify the JSON files). This sequential tool usage was logically necessary and well-executed.\n\nThe response demonstrates excellent restraint by not adding unnecessary information while still being thorough in identifying all relevant JSON files. This is exactly what was requested - nothing more, nothing less.",
+    "passed": true,
+    "timestamp": "2025-09-28T16:31:52.049652"
+  }
+]

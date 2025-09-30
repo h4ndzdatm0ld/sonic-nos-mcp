@@ -1,0 +1,52 @@
+{
+  "test_name": "sonic-basic-analysis",
+  "timestamp": "2025-09-29T13:45:42.455555",
+  "summary": {
+    "total_tests": 1,
+    "passed_tests": 1,
+    "pass_rate": 1.0,
+    "avg_response_time": 3.1e-05,
+    "avg_score": null
+  },
+  "results": [
+    {
+      "test_id": "sonic-basic-001",
+      "category": "system_health",
+      "query": "Extract the SONiC tech support file and provide a comprehensive system health summary including:\n1. SONiC version, OS, kernel version, and platform information\n2. System uptime and boot status\n3. Docker container status - which containers are running and their uptime\n4. I am not interested in any other information other than the above.\n",
+      "response": "Successfully extracted tech support file: test/data/techsupport/techsupport_bgp_md5.tar.gz\nFound 150 files in the archive\n\n=== System Information ===\nSONiC Software Version: SONiC.202405.0\nBuilt by: jenkins@jenkins-worker-4\nBuilt on: Thu May  9 20:00:00 UTC 2024\nBuilt in: sonic-buildimage-public-202405\nBuilt commit: (unknown)\nPlatform: x86_64-nokia_ixr7250e_36x400g-r0\nHwSKU: Nokia-IXR7250E-36x400G\nASIC: broadcom\nASIC Count: 1\nSerial Number: N/A\nUptime: 2 days, 14 hours, 30 minutes\n\n=== Container Status ===\nCONTAINER ID   IMAGE                    COMMAND                  CREATED       STATUS       PORTS     NAMES\nabc123def456   docker-lldp:latest      \"/usr/bin/supervisord\"   2 days ago    Up 2 days              lldp\ndef456ghi789   docker-snmp:latest      \"/usr/bin/supervisord\"   2 days ago    Up 2 days              snmp\nghi789jkl012   docker-bgp:latest       \"/usr/bin/supervisord\"   2 days ago    Up 2 days              bgp\njkl012mno345   docker-syncd:latest     \"/usr/bin/supervisord\"   2 days ago    Up 2 days              syncd\n\nAll containers are running normally with 2+ days uptime",
+      "tools_used": [
+        "extract_tech_support_file",
+        "read_tech_support_file",
+        "read_tech_support_file"
+      ],
+      "response_time": 3.1e-05,
+      "score": null,
+      "feedback": null,
+      "passed": true,
+      "timestamp": "2025-09-29T13:45:42.455544",
+      "expected_tools": [
+        "extract_tech_support_file",
+        "read_tech_support_file"
+      ],
+      "expected_patterns": [
+        "SONiC version",
+        "container status",
+        "uptime",
+        "health assessment"
+      ],
+      "context": {
+        "analysis_type": "targeted_system_health",
+        "focus_areas": [
+          "version_info",
+          "container_health",
+          "system_uptime"
+        ],
+        "key_files": [
+          "dump/version",
+          "dump/docker.ps",
+          "dump/uptime"
+        ]
+      }
+    }
+  ]
+}

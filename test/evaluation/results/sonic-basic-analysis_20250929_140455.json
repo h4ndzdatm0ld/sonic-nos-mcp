@@ -1,0 +1,17 @@
+[
+  {
+    "test_id": "sonic-basic-001",
+    "category": "system_health",
+    "query": "Extract the SONiC tech support file and provide a comprehensive system health summary including:\n1. SONiC version, OS, kernel version, and platform information\n2. System uptime and boot status\n3. Docker container status - which containers are running and their uptime\n4. I am not interested in any other information other than the above.\n",
+    "expected": "Complete system health report with SONiC version, container status, uptime information,\nand overall health assessment based on container states and system stability.\n",
+    "actual": "Extracted tech support file to temporary directory.\nBGP Configuration Analysis:\n- BGP MD5 authentication is configured\n- All BGP neighbors are established",
+    "response_time": 9e-06,
+    "used_tools": [
+      "extract_tech_support_file"
+    ],
+    "llm_judge_score": 4,
+    "llm_judge_feedback": "Good tool usage - some expected tools were used",
+    "passed": false,
+    "timestamp": "2025-09-29T14:04:55.347152"
+  }
+]

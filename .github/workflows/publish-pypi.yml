@@ -1,0 +1,131 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      test_pypi:
+        description: 'Publish to Test PyPI instead of PyPI'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  quality-check:
+    name: Pre-publish Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Quality Gates - Code formatting
+        run: |
+          uv run ruff check src/ infra/
+          uv run ruff format --check src/ infra/
+
+      - name: Quality Gates - Type checking
+        run: uv run hatch run mypy src/
+
+      - name: Quality Gates - All tests must pass
+        run: uv run hatch run python -m pytest test/ -v --cov-fail-under=90
+
+      - name: Build package
+        run: uv build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish-pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: [quality-check]
+    environment:
+      name: ${{ github.event.inputs.test_pypi == 'true' && 'test-pypi' || 'pypi' }}
+      url: ${{ github.event.inputs.test_pypi == 'true' && 'https://test.pypi.org/p/sonic-nos-mcp' || 'https://pypi.org/p/sonic-nos-mcp' }}
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install ${{ env.PYTHON_VERSION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Verify package contents
+        run: |
+          ls -la dist/
+          uv run twine check dist/*
+
+      - name: Publish to Test PyPI
+        if: github.event.inputs.test_pypi == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          verbose: true
+
+      - name: Publish to PyPI
+        if: github.event.inputs.test_pypi != 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+
+  verify-installation:
+    name: Verify PyPI Installation
+    runs-on: ubuntu-latest
+    needs: [publish-pypi]
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install from PyPI
+        run: |
+          pip install sonic-nos-mcp
+          sonic-nos-mcp --version
+          sonic-nos-mcp --help
+
+      - name: Test basic functionality
+        run: |
+          python -c "
+          import sonic_nos_mcp
+          from sonic_nos_mcp.modules.tech_support.utils.extraction import is_archive_file
+          from pathlib import Path
+          print('✅ Package imports successfully')
+          print('✅ Core functions accessible')
+          print('✅ Installation verified')
+          "

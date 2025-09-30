@@ -1,0 +1,18 @@
+[
+  {
+    "test_id": "sonic-basic-002",
+    "category": "file_navigation",
+    "query": "List all JSON configuration files in the tech support bundle. Do not show me anything else.",
+    "expected": "List of JSON files with paths and descriptions",
+    "actual": "**JSON Configuration Files:**\n\n- `sonic_dump_sonic_20250927_164055/dump/CONFIG_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/STATE_DB.json`  \n- `sonic_dump_sonic_20250927_164055/dump/APPL_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/APPL_STATE_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/ASIC_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB_1.json`\n- `sonic_dump_sonic_20250927_164055/dump/COUNTERS_DB_2.json`\n- `sonic_dump_sonic_20250927_164055/dump/FLEX_COUNTER_DB.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/config_db.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/init_cfg.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/copp_cfg.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/core_analyzer.rc.json`\n- `sonic_dump_sonic_20250927_164055/etc/sonic/default_users.json`\n",
+    "response_time": 15.962131,
+    "used_tools": [
+      "extract_tech_support_file",
+      "list_tech_support_files_tool"
+    ],
+    "llm_judge_score": 4,
+    "llm_judge_feedback": "The response effectively addresses the specific query by providing a comprehensive list of JSON configuration files found in the SONiC tech support bundle. The agent correctly identified and listed 14 JSON files with their full paths, covering all the major SONiC databases (CONFIG_DB, STATE_DB, APPL_DB, etc.) and configuration files (/etc/sonic/ directory).\n\n**Strengths:**\n- **High Relevance**: Directly answers the user's request with no extraneous information\n- **Good Accuracy**: All listed files are legitimate SONiC JSON configuration and database files\n- **Appropriate Tool Usage**: Used both `list_tech_support_files_tool` and `extract_tech_support_file` appropriately to identify JSON files\n- **Clean Formatting**: Well-organized bullet-point list that's easy to read\n- **Comprehensive Coverage**: Includes database dumps, system configs, and application-specific JSON files\n\n**Minor Areas for Improvement:**\n- Missing brief descriptions of what each file contains (e.g., \"CONFIG_DB.json - main configuration database\"), though the user specifically requested \"Do not show me anything else\"\n- Could have been slightly more systematic in organization (grouping database dumps vs. config files)\n\nThe response demonstrates solid understanding of SONiC architecture and effectively uses the available tools to provide exactly what was requested - nothing more, nothing less.",
+    "passed": true,
+    "timestamp": "2025-09-28T15:56:58.193617"
+  }
+]
