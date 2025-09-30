@@ -1,6 +1,5 @@
 """Unit tests for text chunking utilities."""
 
-import gzip
 import os
 import re
 import tempfile
@@ -470,12 +469,22 @@ class TestFileProcessorErrorCases:
         # Create a file and remove read permissions to simulate permission error
         temp_file = Path(tempfile.mktemp(suffix=".txt"))
         temp_file.write_text("test content")
-        temp_file.chmod(0o000)  # Remove all permissions
 
         try:
+            temp_file.chmod(0o000)  # Remove all permissions
             processor = FileProcessor(temp_file)
-            with pytest.raises((IOError, PermissionError)):
-                processor.read()
+
+            # Check if we're running in an environment where permission restrictions work
+            # (i.e., not as root in Docker)
+            try:
+                with open(temp_file, "r") as f:
+                    f.read()
+                # If we can read despite 0o000, skip this test (running as root/Docker)
+                pytest.skip("Permission restrictions don't apply in this environment (likely running as root)")
+            except (PermissionError, OSError):
+                # Permission restrictions work, proceed with test
+                with pytest.raises((IOError, PermissionError)):
+                    processor.read()
         finally:
             temp_file.chmod(0o644)  # Restore permissions for cleanup
             if temp_file.exists():

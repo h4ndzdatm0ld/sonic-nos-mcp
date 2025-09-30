@@ -3,7 +3,6 @@
 import os
 import re
 import logging
-from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
@@ -12,22 +11,21 @@ from sonic_nos_mcp.modules.tech_support.models.text_chunking_models import TextC
 logger = logging.getLogger(__name__)
 
 
-@dataclass
 class FileProcessor:
     """Handles file operations including reading, chunking, and pattern matching.
 
-    Simple dataclass-based file processor with environment variable controlled chunk sizing.
+    File processor with environment variable controlled chunk sizing.
     """
 
-    file_path: Union[str, Path]
-    chunk_size: Optional[int] = None
+    def __init__(self, file_path: Union[str, Path], chunk_size: Optional[int] = None) -> None:
+        """Initialize FileProcessor with proper type safety.
 
-    def __post_init__(self):
-        """Initialize after dataclass creation."""
-        if isinstance(self.file_path, str):
-            self.file_path = Path(self.file_path)
-        if self.chunk_size is None:
-            self.chunk_size = self._get_default_chunk_size()
+        Args:
+            file_path: Path to the file to process
+            chunk_size: Optional chunk size, uses default if None
+        """
+        self.file_path: Path = Path(file_path)
+        self.chunk_size: int = chunk_size if chunk_size is not None else self._get_default_chunk_size()
         self.content: Optional[str] = None  # Lazy-loaded content
         logger.debug(f"Initialized FileProcessor for {self.file_path} with chunk size {self.chunk_size}")
 
@@ -202,7 +200,7 @@ class FileProcessor:
 
         for i, line in enumerate(lines):
             if regex.search(line):
-                logger.debug(f"Found match at line {i+1}")
+                logger.debug(f"Found match at line {i + 1}")
                 start = max(0, i - context_lines)
                 end = min(len(lines), i + context_lines + 1)
 
@@ -212,7 +210,7 @@ class FileProcessor:
 
                 section_lines = lines[start:end]
                 section_text = "\n".join(section_lines)
-                section_with_header = f"Lines {start+1}-{end}:\n{section_text}"
+                section_with_header = f"Lines {start + 1}-{end}:\n{section_text}"
 
                 match_sections.append(section_with_header)
                 included_lines.update(range(start, end))

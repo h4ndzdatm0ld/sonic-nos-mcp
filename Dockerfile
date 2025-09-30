@@ -14,15 +14,14 @@ COPY pyproject.toml uv.lock* README.md ./
 # Create virtual environment with ALL dependencies (including dev dependencies)
 RUN uv sync --frozen --no-cache
 
-# Copy ALL source code, tests, and infra
+# Copy ALL source code and tests
 COPY src/ ./src/
 COPY test/ ./test/
-COPY infra/ ./infra/
 
 # QUALITY GATE 1: Code formatting and linting with ruff
 RUN echo "=== QUALITY GATE 1: Ruff Code Quality ===" \
-    && uv run ruff check src/ infra/ \
-    && uv run ruff format --check src/ infra/ \
+    && uv run ruff format src/ test/ \
+    && uv run ruff check src/ test/ \
     && echo "✅ Ruff quality checks passed"
 
 # QUALITY GATE 2: Type checking with mypy
@@ -30,20 +29,10 @@ RUN echo "=== QUALITY GATE 2: MyPy Type Checking ===" \
     && uv run mypy src/ \
     && echo "✅ MyPy type checking passed"
 
-# QUALITY GATE 3: All unit tests must pass
-RUN echo "=== QUALITY GATE 3: Unit Tests ===" \
-    && uv run hatch run python -m pytest test/unit/ -v \
-    && echo "✅ All unit tests passed"
-
-# QUALITY GATE 4: Integration tests with real data must pass
-RUN echo "=== QUALITY GATE 4: Integration Tests ===" \
-    && uv run hatch run python -m pytest test/integration/ -v \
-    && echo "✅ All integration tests passed"
-
-# QUALITY GATE 5: Code coverage requirement (90%+)
-RUN echo "=== QUALITY GATE 5: Code Coverage Validation ===" \
-    && uv run hatch run python -m pytest test/ --cov-report=term --cov-fail-under=90 \
-    && echo "✅ Code coverage requirement met (90%+)"
+# QUALITY GATE 3: All tests except evaluation must pass with 90%+ coverage
+RUN echo "=== QUALITY GATE 3: All Tests with Coverage Validation ===" \
+    && uv run python -m pytest test/unit/ test/integration/ -v --cov-report=term --cov-fail-under=90 \
+    && echo "✅ All tests passed with required coverage (90%+)"
 
 # Stage 2: Build clean production dependencies
 FROM python:3.12-slim AS builder

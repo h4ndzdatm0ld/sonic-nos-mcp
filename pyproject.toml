@@ -16,18 +16,21 @@ dependencies = [
     "pydantic>=2.0.0",
     "pyyaml>=6.0.0",
     "strands-agents>=1.10.0",
+    "ruff>=0.11.4",
+    "mypy>=1.0.0",
+    "types-PyYAML>=6.0.0",
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
 ]
 
 [project.scripts]
 sonic-nos-mcp = "sonic_nos_mcp.server:main"
+format = "scripts:format_code"
 
 [tool.hatch.envs.default]
 python = "3.12"
 dependencies = [
-    "mypy>=1.0.0",
-    "types-PyYAML>=6.0.0",
     "black>=24.0.0",
-    "ruff>=0.11.4",
     "pre-commit>=3.0.0",
 ]
 

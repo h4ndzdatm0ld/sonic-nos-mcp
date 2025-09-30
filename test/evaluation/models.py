@@ -267,7 +267,7 @@ class EvalAgentTester:
         report = f"""
 === SONiC Agent Evaluation Report ===
 Test Suite: {test_name}
-Timestamp: {results.timestamp.strftime('%Y-%m-%d %H:%M:%S')}
+Timestamp: {results.timestamp.strftime("%Y-%m-%d %H:%M:%S")}
 
 SUMMARY:
 - Total Tests: {results.total_tests}
@@ -289,12 +289,12 @@ DETAILED RESULTS:
 [{status}] {result.test_id} ({result.category})
   Query: {result.query}
   Response Time: {result.response_time:.2f}s
-  Tools Used: {', '.join(result.tools_used)}
+  Tools Used: {", ".join(result.tools_used)}
 """
             score_str = f"{result.score}/5.0" if result.score is not None else "N/A"
             report += f"""
   Score: {score_str}
-  Expected Tools: {', '.join(result.expected_tools)}
+  Expected Tools: {", ".join(result.expected_tools)}
 """
 
             if not result.passed:

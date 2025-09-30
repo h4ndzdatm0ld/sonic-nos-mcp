@@ -158,7 +158,7 @@ class EvalAgentTester:
         You are evaluating a SONiC network analysis agent response.
 
         Query: {case.query}
-        Expected: {case.expected or 'Not specified'}
+        Expected: {case.expected or "Not specified"}
         Expected Tools: {case.expected_tools}
         Expected Patterns: {case.expected_patterns}
 
@@ -350,8 +350,8 @@ class EvalAgentTester:
 
 ## 📊 Summary
 - **Total Tests**: {metrics.total_tests}
-- **Passed**: {metrics.passed_tests} ({metrics.passed_tests/metrics.total_tests*100:.1f}%)
-- **Failed**: {metrics.failed_tests} ({metrics.failed_tests/metrics.total_tests*100:.1f}%)
+- **Passed**: {metrics.passed_tests} ({metrics.passed_tests / metrics.total_tests * 100:.1f}%)
+- **Failed**: {metrics.failed_tests} ({metrics.failed_tests / metrics.total_tests * 100:.1f}%)
 
 ## ⏱️ Performance
 - **Average Response Time**: {metrics.avg_response_time:.2f}s
@@ -369,7 +369,7 @@ class EvalAgentTester:
         for category, count in metrics.categories.items():
             category_results = [r for r in results if r.category == category]
             category_passed = sum(1 for r in category_results if r.passed)
-            report += f"- **{category}**: {category_passed}/{count} passed ({category_passed/count*100:.1f}%)\n"
+            report += f"- **{category}**: {category_passed}/{count} passed ({category_passed / count * 100:.1f}%)\n"
 
         # Failed tests details
         failed_tests = [r for r in results if not r.passed]
@@ -388,7 +388,7 @@ class EvalAgentTester:
         # Print summary for test output
         print("\n📊 Evaluation Summary:")
         print(
-            f"   Passed: {metrics.passed_tests}/{metrics.total_tests} ({metrics.passed_tests/metrics.total_tests*100:.1f}%)"
+            f"   Passed: {metrics.passed_tests}/{metrics.total_tests} ({metrics.passed_tests / metrics.total_tests * 100:.1f}%)"
         )
         print(f"   Avg Score: {metrics.avg_llm_score:.1f}/5")
         print(f"   Avg Response: {metrics.avg_response_time:.1f}s")

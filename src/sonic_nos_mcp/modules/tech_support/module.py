@@ -32,6 +32,7 @@ class TechSupportModule(ModuleBase):
 
         # Register resource with exception handling
         try:
+
             @mcp.resource(
                 "sonic://tech-support-guide",
                 description="Comprehensive guide for analyzing SONiC network device tech support files",
@@ -67,6 +68,7 @@ class TechSupportModule(ModuleBase):
 
         # Register extract tool with exception handling
         try:
+
             @mcp.tool(
                 description="""
             Extract a tech support file to a temporary directory.
@@ -146,6 +148,7 @@ class TechSupportModule(ModuleBase):
 
         # Register list tool with exception handling
         try:
+
             @mcp.tool(
                 description="""
             List all files in the extracted tech support directory with optional pattern filtering.
@@ -171,7 +174,9 @@ class TechSupportModule(ModuleBase):
                 pattern: Annotated[Optional[str], Field(description="Optional glob pattern to filter files")] = None,
             ):
                 """List all files in the extracted tech support directory."""
-                logger.info(f"Tool called: list_tech_support_files_tool with extract_dir={extract_dir}, pattern={pattern}")
+                logger.info(
+                    f"Tool called: list_tech_support_files_tool with extract_dir={extract_dir}, pattern={pattern}"
+                )
 
                 request = ListTechSupportFilesRequest(
                     extract_dir=extract_dir,
@@ -205,6 +210,7 @@ class TechSupportModule(ModuleBase):
 
         # Register read tool with exception handling
         try:
+
             @mcp.tool(
                 description="""
             Read SONiC tech support files with chunking and pattern matching.

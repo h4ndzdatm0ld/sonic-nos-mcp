@@ -8,7 +8,7 @@ tools from all available modules using a plugin architecture.
 import argparse
 import logging
 import sys
-from typing import Annotated
+from typing import Annotated, Literal
 
 from mcp.server.fastmcp import FastMCP
 from pydantic import Field
@@ -62,11 +62,16 @@ class SonicNosMcpServer:
             except Exception as e:
                 logger.exception("Failed to load module %s: %s", module_name, str(e))
 
-    def run(self, transport: Annotated[str, Field(description="Transport to use (stdio or http)")] = "stdio") -> None:
+    def run(
+        self,
+        transport: Annotated[
+            Literal["stdio", "sse", "streamable-http"], Field(description="Transport to use")
+        ] = "stdio",
+    ) -> None:
         """Run the server with the specified transport mechanism.
 
         Args:
-            transport: Transport to use (stdio or http)
+            transport: Transport to use (stdio, sse, or streamable-http)
         """
         logger.info("Starting server with transport: %s", transport)
         self.mcp.run(transport=transport)

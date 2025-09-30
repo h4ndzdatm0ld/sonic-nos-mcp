@@ -1,7 +1,7 @@
 """Unit tests for inspect_tool."""
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 from sonic_nos_mcp.modules.tech_support.tools.inspect_tool import (
     read_tech_support_file_content,
@@ -9,8 +9,6 @@ from sonic_nos_mcp.modules.tech_support.tools.inspect_tool import (
 from sonic_nos_mcp.modules.tech_support.models.text_chunking_models import (
     GetTechSupportFileContentRequest,
     GetTechSupportFileContentResponse,
-    InspectTechSupportFileRequest,
-    InspectTechSupportFileResponse,
 )
 
 
@@ -20,7 +18,10 @@ class TestReadTechSupportFileContent:
     def test_read_tech_support_file_content_simple_chunking(self, sample_text_file):
         """Test simple file content chunking without pattern."""
         request = GetTechSupportFileContentRequest(
-            file_path=str(sample_text_file), pattern=None, chunk_size="50", page=1  # String as per model
+            file_path=str(sample_text_file),
+            pattern=None,
+            chunk_size="50",
+            page=1,  # String as per model
         )
 
         response = read_tech_support_file_content(request)
@@ -37,7 +38,10 @@ class TestReadTechSupportFileContent:
     def test_read_tech_support_file_content_with_pattern(self, sample_text_file):
         """Test file content with pattern matching."""
         request = GetTechSupportFileContentRequest(
-            file_path=str(sample_text_file), pattern="ERROR", chunk_size="200", page=1  # String as per model
+            file_path=str(sample_text_file),
+            pattern="ERROR",
+            chunk_size="200",
+            page=1,  # String as per model
         )
 
         response = read_tech_support_file_content(request)
