@@ -88,6 +88,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: false
+          load: true
           tags: sonic-nos-mcp:test
           cache-from: type=gha
           cache-to: type=gha,mode=max
