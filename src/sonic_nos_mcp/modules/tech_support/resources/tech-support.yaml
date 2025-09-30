@@ -5,8 +5,8 @@ description: "Comprehensive guide for analyzing SONiC network device tech suppor
 version: "2.0.0"
 author: "SONiC"
 
-# Resource content focused on MCP tool workflows
 content: |
+
   # SONiC Tech Support Analysis with MCP Tools
 
   ## Overview
@@ -62,123 +62,33 @@ content: |
   ### 2. Database Analysis with Pattern Matching
 
   **CONFIG_DB Analysis (System Configuration):**
-
-  ```
-  # Get device metadata and platform information
-  read_tech_support_file(
-      file_path="dump/CONFIG_DB.json",
-      pattern="DEVICE_METADATA.*localhost",
-      page=1
-  )
-
-  # Find specific interface configurations
-  read_tech_support_file(
-      file_path="dump/CONFIG_DB.json",
-      pattern="PORT.*Ethernet16|BREAKOUT_CFG.*Ethernet16",
-      page=1
-  )
-
-  # Check VLAN configurations
-  read_tech_support_file(
-      file_path="dump/CONFIG_DB.json",
-      pattern="VLAN.*|VLAN_MEMBER.*",
-      page=1
-  )
-
-  # BGP neighbor configurations
-  read_tech_support_file(
-      file_path="dump/CONFIG_DB.json",
-      pattern="BGP_NEIGHBOR.*",
-      page=1
-  )
-  ```
+  - `dump/CONFIG_DB.json: DEVICE_METADATA.*localhost` - Device metadata and platform information
+  - `dump/CONFIG_DB.json: PORT.*Ethernet16|BREAKOUT_CFG.*Ethernet16` - Specific interface configurations
+  - `dump/CONFIG_DB.json: VLAN.*|VLAN_MEMBER.*` - VLAN configurations
+  - `dump/CONFIG_DB.json: BGP_NEIGHBOR.*` - BGP neighbor configurations
 
   **STATE_DB Analysis (Operational State):**
-
-  ```
-  # System health overview
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="SYSTEM_HEALTH_INFO.*",
-      page=1
-  )
-
-  # Interface operational status
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="PORT_TABLE.*Ethernet16",
-      page=1
-  )
-
-  # Hardware component status
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="PSU_INFO.*|FAN_INFO.*|TEMPERATURE_INFO.*",
-      page=1
-  )
-
-  # Service health status
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="ALL_SERVICE_STATUS.*",
-      page=1
-  )
-  ```
+  - `dump/STATE_DB.json: SYSTEM_HEALTH_INFO.*` - System health overview
+  - `dump/STATE_DB.json: PORT_TABLE.*Ethernet16` - Interface operational status
+  - `dump/STATE_DB.json: PSU_INFO.*|FAN_INFO.*|TEMPERATURE_INFO.*` - Hardware component status
+  - `dump/STATE_DB.json: ALL_SERVICE_STATUS.*` - Service health status
 
   ### 3. Log Analysis with Compressed File Support
 
   **The MCP tools automatically handle compressed (.gz) files:**
-
-  ```
-  # Analyze critical SWSS state changes (handles .gz automatically)
-  read_tech_support_file(
-      file_path="log/swss.rec.gz",
-      pattern="Ethernet16.*|STP.*|VLAN.*",
-      page=1
-  )
-
-  # Check SAI hardware API calls
-  read_tech_support_file(
-      file_path="log/sairedis.rec.gz",
-      pattern="PORT.*|DOWN.*|BLOCK.*",
-      page=1
-  )
-
-  # System log analysis
-  read_tech_support_file(
-      file_path="log/syslog.gz",
-      pattern="(?i)(error|critical|fail).*",
-      page=1
-  )
-
-  # BGP daemon logs
-  read_tech_support_file(
-      file_path="log/bgpd.log.gz",
-      pattern="(?i)(auth.*fail|password.*mismatch|inactive)",
-      page=1
-  )
-  ```
+  - `log/swss.rec.gz: Ethernet16.*|STP.*|VLAN.*` - Critical SWSS state changes
+  - `log/sairedis.rec.gz: PORT.*|DOWN.*|BLOCK.*` - SAI hardware API calls
+  - `log/syslog.gz: (?i)\b(critical|fatal|panic|oops)\b.*` - System log analysis (OPTIMIZED)
+  - `log/bgpd.log.gz: (?i)(auth.*fail|password.*mismatch|inactive)` - BGP daemon logs
 
   ### 4. System Information Files
 
   **Use simple reads for formatted status files:**
-
-  ```
-  # Interface status table
-  read_tech_support_file(file_path="dump/interface.status", page=1)
-
-  # SONiC version and platform info
-  read_tech_support_file(file_path="dump/version", page=1)
-
-  # Container status
-  read_tech_support_file(file_path="dump/docker.ps", page=1)
-
-  # Process information
-  read_tech_support_file(file_path="dump/top", page=1)
-
-  # Hardware sensor readings
-  read_tech_support_file(file_path="dump/sensors", page=1)
-  ```
+  - `dump/interface.status` - Interface status table
+  - `dump/version` - SONiC version and platform info
+  - `dump/docker.ps` - Container status
+  - `dump/top` - Process information
+  - `dump/sensors` - Hardware sensor readings
 
   ## Troubleshooting Scenarios with MCP Tools
 
@@ -191,39 +101,19 @@ content: |
   extract_tech_support_file(file_path="techsupport.tar.gz")
 
   # Step 2: Check interface administrative and operational status
-  read_tech_support_file(
-      file_path="dump/interface.status",
-      pattern="Ethernet16",
-      page=1
-  )
+  dump/interface.status: Ethernet16
 
   # Step 3: Verify intended configuration in CONFIG_DB
-  read_tech_support_file(
-      file_path="dump/CONFIG_DB.json",
-      pattern="PORT.*Ethernet16.*|BREAKOUT_CFG.*Ethernet16",
-      page=1
-  )
+  dump/CONFIG_DB.json: PORT.*Ethernet16.*|BREAKOUT_CFG.*Ethernet16
 
   # Step 4: Check operational details in STATE_DB
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="PORT_TABLE.*Ethernet16",
-      page=1
-  )
+  dump/STATE_DB.json: PORT_TABLE.*Ethernet16
 
   # Step 5: Examine error counters and statistics
-  read_tech_support_file(
-      file_path="dump/COUNTERS_DB.json",
-      pattern="Ethernet16.*(error|drop|discard)",
-      page=1
-  )
+  dump/COUNTERS_DB.json: Ethernet16.*(error|drop|discard)
 
   # Step 6: Review recent state changes in SWSS logs
-  read_tech_support_file(
-      file_path="log/swss.rec.gz",
-      pattern="Ethernet16.*(UP|DOWN|BLOCK|LEARN|FORWARD)",
-      page=1
-  )
+  log/swss.rec.gz: Ethernet16.*(UP|DOWN|BLOCK|LEARN|FORWARD)
   ```
 
   ### Scenario 2: BGP Session Troubleshooting
@@ -232,35 +122,19 @@ content: |
 
   ```
   # Step 1: Extract the archive
-  extract_tech_support_file(file_path="techsupport_bgp_md5.tar.gz")
+  extract_tech_support_file(file_path="techsupport.tar.gz")
 
   # Step 2: Check BGP neighbor status
-  read_tech_support_file(
-      file_path="dump/bgp.summary",
-      pattern="10\.255\.0\.2.*",
-      page=1
-  )
+  dump/bgp.summary: 10\.255\.0\.2.*
 
   # Step 3: Examine BGP configuration for authentication
-  read_tech_support_file(
-      file_path="dump/CONFIG_DB.json",
-      pattern="BGP_NEIGHBOR.*10\.255\.0\.2.*auth.*md5",
-      page=1
-  )
+  dump/CONFIG_DB.json: BGP_NEIGHBOR.*10\.255\.0\.2.*auth.*md5
 
   # Step 4: Check BGP daemon logs for session issues
-  read_tech_support_file(
-      file_path="log/bgpd.log.gz",
-      pattern="10\.255\.0\.2.*(password.*mismatch|auth.*fail|Inactive)",
-      page=1
-  )
+  log/bgpd.log.gz: 10\.255\.0\.2.*(password.*mismatch|auth.*fail|Inactive)
 
   # Step 5: Look for relevant system log entries
-  read_tech_support_file(
-      file_path="log/syslog.gz",
-      pattern="bgp.*10\.255\.0\.2.*(Connect|Active|auth)",
-      page=1
-  )
+  log/syslog.gz: bgp.*10\.255\.0\.2.*(Connect|Active|auth)
   ```
 
   ### Scenario 3: Hardware Health Assessment
@@ -272,31 +146,16 @@ content: |
   extract_tech_support_file(file_path="techsupport.tar.gz")
 
   # Step 2: Check overall system health summary
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="SYSTEM_HEALTH_INFO.*",
-      page=1
-  )
+  dump/STATE_DB.json: SYSTEM_HEALTH_INFO.*
 
   # Step 3: Examine individual hardware components
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="PSU_INFO.*|FAN_INFO.*|TEMPERATURE_INFO.*",
-      page=1
-  )
+  dump/STATE_DB.json: PSU_INFO.*|FAN_INFO.*|TEMPERATURE_INFO.*
 
   # Step 4: Get current sensor readings
-  read_tech_support_file(
-      file_path="dump/sensors",
-      page=1
-  )
+  dump/sensors
 
   # Step 5: Check for hardware alerts in system logs
-  read_tech_support_file(
-      file_path="log/syslog.gz",
-      pattern="(?i)(hardware|psu|fan|temperature|thermal).*(error|fail|critical|alert)",
-      page=1
-  )
+  log/syslog.gz: (?i)(hardware|psu|fan|temperature|thermal).*(error|fail|critical|alert)
   ```
 
   ### Scenario 4: Container/Service Health Issues
@@ -305,35 +164,19 @@ content: |
 
   ```
   # Step 1: Extract the archive
-  extract_tech_support_file(file_path="techsupport_syncd_crash.tar.gz")
+  extract_tech_support_file(file_path="techsupport.tar.gz")
 
   # Step 2: Check container status and uptime
-  read_tech_support_file(
-      file_path="dump/docker.ps",
-      pattern="syncd.*",
-      page=1
-  )
+  dump/docker.ps: syncd.*
 
   # Step 3: Review service health status
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="ALL_SERVICE_STATUS.*syncd",
-      page=1
-  )
+  dump/STATE_DB.json: ALL_SERVICE_STATUS.*syncd
 
   # Step 4: Check for container crash/restart events
-  read_tech_support_file(
-      file_path="log/syslog.gz",
-      pattern="syncd.*(exit|crash|kill|restart)",
-      page=1
-  )
+  log/syslog.gz: syncd.*(exit|crash|kill|restart)
 
   # Step 5: Examine container resource usage
-  read_tech_support_file(
-      file_path="dump/docker.stats",
-      pattern="syncd.*",
-      page=1
-  )
+  dump/docker.stats: syncd.*
   ```
 
   ### Scenario 5: Memory Exhaustion Analysis
@@ -342,41 +185,25 @@ content: |
 
   ```
   # Step 1: Extract the archive
-  extract_tech_support_file(file_path="techsupport_oom.tar.gz")
+  extract_tech_support_file(file_path="techsupport.tar.gz")
 
   # Step 2: Check reboot history for unusual patterns
-  read_tech_support_file(
-      file_path="dump/reboot.cause.history",
-      pattern="Unknown.*15:5[2-9]|16:0[0-1]",
-      page=1
-  )
+  dump/reboot.cause.history: Unknown.*15:5[2-9]|16:0[0-1]
 
-  # Step 3: Check OOM handling configuration
-  read_tech_support_file(
-      file_path="etc/sysctl.conf",
-      pattern="vm\.panic_on_oom.*",
-      page=1
-  )
+  # Step 3: Look for unclean container termination evidence (ROOT CAUSE)
+  log/syslog: systemd.*service.*left-over process
 
-  # Step 4: Examine container resource usage
-  read_tech_support_file(
-      file_path="dump/docker.stats",
-      pattern=".*",
-      page=1
-  )
+  # Step 4: Check OOM handling configuration
+  etc/sysctl.conf: vm\.panic_on_oom.*
 
-  # Step 5: Check for memory pressure indicators
-  read_tech_support_file(
-      file_path="dump/free",
-      page=1
-  )
+  # Step 5: Examine container resource usage
+  dump/docker.stats: .*
 
-  # Step 6: Look for warm-start evidence after reboot
-  read_tech_support_file(
-      file_path="log/syslog.1.gz",
-      pattern="(?i)(warm.*start|port.*init)",
-      page=1
-  )
+  # Step 6: Check for memory pressure indicators
+  dump/free
+
+  # Step 7: Look for warm-start evidence after reboot
+  log/syslog.1.gz: (?i)(warm.*start|port.*init)
   ```
 
   ## Advanced Pattern Matching Techniques
@@ -427,7 +254,14 @@ content: |
   # Service health issues
   "ALL_SERVICE_STATUS.*(fail|error|inactive|stopped)"
 
-  # Memory and resource issues
+  # Memory and resource issues - FIXED PATTERN
+  "(?i)\b(oom-kill|out of memory|memory exhausted|killed process)\b.*"
+  ```
+
+  **AVOID these problematic patterns:**
+  ```
+  # PROBLEMATIC - Returns excessive results
+  "(?i)(error|critical|fail).*"
   "(?i)(oom|out.*memory|killed.*memory)"
   ```
 
@@ -436,63 +270,19 @@ content: |
   ### Multi-File Analysis Workflow
 
   **For comprehensive interface analysis:**
-
   ```
   # 1. Get interface configuration intent
-  read_tech_support_file(
-      file_path="dump/CONFIG_DB.json",
-      pattern="PORT.*Ethernet16.*speed|admin_status",
-      page=1
-  )
+  dump/CONFIG_DB.json: PORT.*Ethernet16.*speed|admin_status
 
   # 2. Check current operational state
-  read_tech_support_file(
-      file_path="dump/STATE_DB.json",
-      pattern="PORT_TABLE.*Ethernet16.*oper_status",
-      page=1
-  )
+  dump/STATE_DB.json: PORT_TABLE.*Ethernet16.*oper_status
 
   # 3. Verify interface statistics
-  read_tech_support_file(
-      file_path="dump/interface.status",
-      pattern="Ethernet16",
-      page=1
-  )
+  dump/interface.status: Ethernet16
 
   # 4. Check for recent state changes
-  read_tech_support_file(
-      file_path="log/swss.rec.gz",
-      pattern="Ethernet16.*(state|status|link)",
-      page=1
-  )
+  log/swss.rec.gz: Ethernet16.*(state|status|link)
   ```
-
-  ## Best Practices for MCP Tool Usage
-
-  ### 1. Always Start with Extraction
-  - Use `extract_tech_support_file` first to get the complete file listing
-  - Review the returned file list to understand archive structure
-  - Use file sizes to prioritize analysis (larger files may need chunking)
-
-  ### 2. Use Targeted Pattern Matching
-  - Start with specific patterns rather than reading entire files
-  - Use regex patterns to find relevant content quickly
-  - Combine multiple patterns with alternation (`pattern1|pattern2`)
-
-  ### 3. Leverage Automatic Compression Handling
-  - MCP tools automatically handle .gz files
-  - No need for manual decompression commands
-  - Compressed log analysis is seamless
-
-  ### 4. Utilize Pagination for Large Files
-  - Start with `page=1` and check `total_pages` in response
-  - Use pagination to navigate through large database files
-  - Pattern matching reduces the need for full file reads
-
-  ### 5. Cross-Reference Findings
-  - Correlate configuration (CONFIG_DB) with operational state (STATE_DB)
-  - Match log events with configuration changes
-  - Verify hardware status across multiple data sources
 
   ## File Priority Guide
 
@@ -529,15 +319,4 @@ content: |
   - **File not found**: Use `list_tech_support_files_tool` to verify file paths
   - **Large file handling**: Use pagination or more specific patterns
   - **Extraction failure**: Check archive format and file permissions
-
-  ## Summary
-
-  The MCP server tools provide powerful capabilities for SONiC tech support analysis:
-
-  - **Automated extraction** eliminates manual archive handling
-  - **Pattern matching** replaces complex grep operations
-  - **Intelligent chunking** handles large files safely
-  - **Compressed file support** works seamlessly with .gz logs
-  - **Structured responses** provide better data for LLM analysis
-
-  Focus on using these tools in combination to build comprehensive analysis workflows that correlate findings across multiple files and data sources.
+  - **Too many results**: Use more specific patterns with word boundaries
