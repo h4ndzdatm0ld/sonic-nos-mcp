@@ -63,17 +63,17 @@ class TestComprehensiveExtraction:
 
             # Verify we extracted the reported number of files
             if gz_files_before:
-                assert (
-                    extracted_count > 0
-                ), f"Should have extracted some files from {len(gz_files_before)} .gz files found"
+                assert extracted_count > 0, (
+                    f"Should have extracted some files from {len(gz_files_before)} .gz files found"
+                )
             else:
                 assert extracted_count == 0, "No .gz files found, so extraction count should be 0"
 
             # Verify we have more files after extraction (if we had .gz files to extract)
             if gz_files_before:
-                assert len(files_after) >= len(
-                    files_before
-                ), "Should have at least same number of files after extraction"
+                assert len(files_after) >= len(files_before), (
+                    "Should have at least same number of files after extraction"
+                )
 
             # Step 6: Validate every extracted file is readable
             readable_files = 0
@@ -107,9 +107,9 @@ class TestComprehensiveExtraction:
 
             # Should have minimal unreadable files (only if permissions issues)
             unreadable_percentage = len(unreadable_files) / len(files_after) * 100
-            assert (
-                unreadable_percentage < 10
-            ), f"Too many unreadable files ({unreadable_percentage:.1f}%): {unreadable_files[:5]}"
+            assert unreadable_percentage < 10, (
+                f"Too many unreadable files ({unreadable_percentage:.1f}%): {unreadable_files[:5]}"
+            )
 
         finally:
             cleanup_extraction(temp_dir)
@@ -130,9 +130,9 @@ class TestComprehensiveExtraction:
             extracted_count = extract_all_gz_files(temp_dir)
 
             # Verify extraction count matches found files
-            assert extracted_count == len(
-                gz_files_before
-            ), f"Expected to extract {len(gz_files_before)} files, but extracted {extracted_count}"
+            assert extracted_count == len(gz_files_before), (
+                f"Expected to extract {len(gz_files_before)} files, but extracted {extracted_count}"
+            )
 
             # Verify each .gz file now has a decompressed version
             missing_decompressed = []
@@ -166,12 +166,12 @@ class TestComprehensiveExtraction:
             print(f"Missing or problematic files: {len(missing_decompressed)} files")
 
             # 100% of .gz files should have been successfully extracted (empty files are valid)
-            assert (
-                len(missing_decompressed) == 0
-            ), f"Failed to extract or access {len(missing_decompressed)} files: {missing_decompressed[:5]}"
-            assert successfully_extracted == len(
-                gz_files_before
-            ), f"Expected {len(gz_files_before)} successful extractions, got {successfully_extracted}"
+            assert len(missing_decompressed) == 0, (
+                f"Failed to extract or access {len(missing_decompressed)} files: {missing_decompressed[:5]}"
+            )
+            assert successfully_extracted == len(gz_files_before), (
+                f"Expected {len(gz_files_before)} successful extractions, got {successfully_extracted}"
+            )
 
         finally:
             cleanup_extraction(temp_dir)
@@ -199,9 +199,9 @@ class TestComprehensiveExtraction:
                 print("Remaining files:", [str(f) for f in remaining_gz_files[:5]])
 
             # With remove_archives=True, NO .gz files should remain
-            assert (
-                len(remaining_gz_files) == 0
-            ), f"Found {len(remaining_gz_files)} remaining .gz files after remove_archives=True!"
+            assert len(remaining_gz_files) == 0, (
+                f"Found {len(remaining_gz_files)} remaining .gz files after remove_archives=True!"
+            )
 
         finally:
             cleanup_extraction(temp_dir)

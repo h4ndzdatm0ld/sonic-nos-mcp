@@ -21,17 +21,25 @@ dependencies = [
     "types-PyYAML>=6.0.0",
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
+    "bandit>=1.7.0",
+    "safety>=3.0.0",
 ]
 
 [project.scripts]
 sonic-nos-mcp = "sonic_nos_mcp.server:main"
-format = "scripts:format_code"
 
 [tool.hatch.envs.default]
 python = "3.12"
 dependencies = [
     "black>=24.0.0",
     "pre-commit>=3.0.0",
+]
+
+[tool.hatch.envs.default.scripts]
+format = [
+  "ruff format src/ test/",
+  "ruff check --fix src/ test/",
+  "mypy src/"
 ]
 
 [tool.hatch.envs.test]

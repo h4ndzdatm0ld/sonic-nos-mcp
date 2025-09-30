@@ -30,14 +30,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-extras
 
-      - name: Code formatting check (ruff)
-        run: uv run ruff check src/ test/
-
-      - name: Code formatting check (black)
-        run: uv run ruff format --check src/ test/
-
-      - name: Type checking (mypy)
-        run: uv run mypy src/
+      - name: Code quality validation with format script
+        run: uv run hatch run format
 
       - name: Run unit tests
         run: uv run hatch run python -m pytest test/unit/ -v --cov-report=xml --cov-report=term
