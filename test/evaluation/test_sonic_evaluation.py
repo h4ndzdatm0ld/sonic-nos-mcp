@@ -42,17 +42,17 @@ def test_basic_analysis_evaluation(eval_agent_tester_basic):
 )
 @pytest.mark.skipif(not STRANDS_AVAILABLE, reason="Strands agents not available for LLM evaluation")
 def test_network_troubleshooting_evaluation(eval_agent_tester_network):
-    """Test network troubleshooting scenarios using real LLM agent evaluation."""
+    """Test network troubleshooting scenarios using real LLM agent evaluation with historical trends."""
 
     # Run real LLM agent evaluation using the configured tester
     results = eval_agent_tester_network.evaluate_agent("sonic-network-troubleshooting")
 
-    # Generate and save report
-    report = eval_agent_tester_network.generate_report(results, "Network Troubleshooting")
-    print(f"\n{report}")
+    # Generate enhanced report with historical trends
+    enhanced_report = eval_agent_tester_network.generate_historical_report(results, "sonic-network-troubleshooting")
+    print(f"\n{enhanced_report}")
 
-    # Assert results using pytest integration
-    eval_agent_tester_network.pytest_assert_results(results)
+    # Assert results using enhanced pytest integration with historical context
+    eval_agent_tester_network.pytest_assert_results_with_history(results, "sonic-network-troubleshooting")
 
 
 @pytest.mark.evaluation

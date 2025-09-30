@@ -7,6 +7,8 @@ import json
 import datetime
 import logging
 import re
+import csv
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
@@ -61,6 +63,22 @@ class EvaluationMetrics:
     max_llm_score: int
     categories: Dict[str, int]
     tool_usage_accuracy: float
+
+
+@dataclass
+class HistoricalMetrics:
+    """Historical aggregation of evaluation results across multiple runs."""
+
+    test_id: str
+    total_runs: int
+    avg_score: float
+    score_trend: List[float]  # Last 10 runs
+    avg_response_time: float
+    success_rate: float  # % of runs that passed
+    score_std_dev: float
+    last_run_date: datetime.datetime
+    improvement_trend: str  # "improving", "stable", "declining"
+    run_number: int  # Current run number for this test
 
 
 @dataclass
@@ -433,3 +451,217 @@ class EvalAgentTester:
 
         logger.info(f"All {len(results)} evaluation cases passed successfully")
         print(f"✅ All {len(results)} evaluation cases passed!")
+
+    def load_historical_results(self, agent_name: str, max_runs: int = 50) -> Dict[str, List[Dict[str, Any]]]:
+        """Load historical CSV files and group by test_id."""
+        logger.info(f"Loading historical results for {agent_name} (max {max_runs} runs)")
+
+        # Scan results directory for matching CSV files
+        pattern = f"{agent_name}_*_summary.csv"
+        csv_files = list(self.output_dir.glob(pattern))
+
+        # Sort by timestamp in filename (most recent first)
+        csv_files.sort(key=lambda x: x.name, reverse=True)
+        csv_files = csv_files[:max_runs]  # Limit to max_runs
+
+        logger.debug(f"Found {len(csv_files)} historical CSV files")
+
+        # Parse and aggregate by test_id
+        historical_data: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+
+        for csv_file in csv_files:
+            try:
+                timestamp = self._extract_timestamp_from_filename(csv_file.name)
+                logger.debug(f"Processing historical file: {csv_file.name} (timestamp: {timestamp})")
+
+                with open(csv_file, "r") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        test_id = row["test_id"]
+                        historical_data[test_id].append(
+                            {
+                                "timestamp": timestamp,
+                                "score": float(row["llm_score"]),
+                                "passed": row["passed"].lower() == "true",
+                                "response_time": float(row["response_time"]),
+                                "tools_used": int(row["tools_used"]),
+                            }
+                        )
+            except Exception as e:
+                logger.warning(f"Error processing historical file {csv_file}: {e}")
+                continue
+
+        # Sort each test's runs by timestamp (oldest first for trend analysis)
+        for test_id in historical_data:
+            historical_data[test_id].sort(key=lambda x: x["timestamp"])
+
+        logger.info(f"Loaded historical data for {len(historical_data)} test cases")
+        return dict(historical_data)
+
+    def _extract_timestamp_from_filename(self, filename: str) -> datetime.datetime:
+        """Extract timestamp from filename like 'agent_20250930_121335_summary.csv'."""
+        try:
+            # Extract timestamp part (YYYYMMDD_HHMMSS)
+            parts = filename.split("_")
+            if len(parts) >= 3:
+                date_str = parts[-3]  # 20250930
+                time_str = parts[-2]  # 121335
+                timestamp_str = f"{date_str}_{time_str}"
+                return datetime.datetime.strptime(timestamp_str, "%Y%m%d_%H%M%S")
+        except Exception as e:
+            logger.warning(f"Could not extract timestamp from {filename}: {e}")
+
+        # Fallback to file modification time
+        return datetime.datetime.fromtimestamp(Path(filename).stat().st_mtime)
+
+    def calculate_historical_metrics(self, historical_data: Dict[str, List[Dict[str, Any]]]) -> List[HistoricalMetrics]:
+        """Calculate trends and averages across historical runs."""
+        logger.info(f"Calculating historical metrics for {len(historical_data)} test cases")
+
+        metrics = []
+        for test_id, runs in historical_data.items():
+            if len(runs) < 1:  # Need at least 1 run
+                continue
+
+            scores = [run["score"] for run in runs]
+            response_times = [run["response_time"] for run in runs]
+            passed_count = sum(1 for run in runs if run["passed"])
+
+            # Calculate trend direction
+            trend = self._calculate_trend_direction(scores)
+
+            # Calculate standard deviation
+            score_mean = sum(scores) / len(scores)
+            score_variance = sum((score - score_mean) ** 2 for score in scores) / len(scores)
+            score_std_dev = score_variance**0.5
+
+            metric = HistoricalMetrics(
+                test_id=test_id,
+                total_runs=len(runs),
+                avg_score=score_mean,
+                score_trend=scores[-10:],  # Last 10 runs
+                avg_response_time=sum(response_times) / len(response_times),
+                success_rate=passed_count / len(runs),
+                score_std_dev=score_std_dev,
+                last_run_date=max(run["timestamp"] for run in runs),
+                improvement_trend=trend,
+                run_number=len(runs),
+            )
+            metrics.append(metric)
+
+            logger.debug(f"Calculated metrics for {test_id}: avg_score={metric.avg_score:.1f}, trend={trend}")
+
+        logger.info(f"Calculated historical metrics for {len(metrics)} test cases")
+        return metrics
+
+    def _calculate_trend_direction(self, scores: List[float]) -> str:
+        """Calculate trend direction based on score progression."""
+        if len(scores) < 3:
+            return "stable"
+
+        # Compare recent half vs older half
+        mid_point = len(scores) // 2
+        recent_avg = sum(scores[mid_point:]) / len(scores[mid_point:])
+        older_avg = sum(scores[:mid_point]) / len(scores[:mid_point])
+
+        diff = recent_avg - older_avg
+
+        if diff > 0.3:  # Significant improvement
+            return "improving"
+        elif diff < -0.3:  # Significant decline
+            return "declining"
+        else:
+            return "stable"
+
+    def detect_regressions(self, current_results: List[EvaluationResult], agent_name: str) -> List[str]:
+        """Detect performance regressions compared to historical averages."""
+        logger.info(f"Detecting regressions for {len(current_results)} current results")
+
+        historical_data = self.load_historical_results(agent_name)
+        regressions = []
+
+        for result in current_results:
+            if result.test_id in historical_data:
+                hist_runs = historical_data[result.test_id]
+                if len(hist_runs) >= 3:  # Need sufficient history
+                    hist_scores = [run["score"] for run in hist_runs]
+                    hist_avg = sum(hist_scores) / len(hist_scores)
+
+                    # Alert if current score is significantly below historical average
+                    if result.llm_judge_score < hist_avg - 1.0:  # 1 point threshold
+                        regressions.append(
+                            f"⚠️ Regression detected in {result.test_id}: "
+                            f"Current {result.llm_judge_score}/5 vs Historical {hist_avg:.1f}/5 "
+                            f"(based on {len(hist_runs)} runs)"
+                        )
+                        logger.warning(
+                            f"Regression detected: {result.test_id} current={result.llm_judge_score} vs hist={hist_avg:.1f}"
+                        )
+
+        logger.info(f"Found {len(regressions)} potential regressions")
+        return regressions
+
+    def generate_historical_report(self, current_results: List[EvaluationResult], agent_name: str) -> str:
+        """Generate report including historical trends."""
+        logger.info(f"Generating historical report for {agent_name}")
+
+        # Get current run report
+        current_report = self.generate_report(current_results, agent_name)
+
+        # Load and analyze historical data
+        historical_data = self.load_historical_results(agent_name)
+        if not historical_data:
+            logger.info("No historical data available, returning current report only")
+            return current_report
+
+        historical_metrics = self.calculate_historical_metrics(historical_data)
+
+        trend_report = f"""
+
+## 📈 Historical Trends (Last {sum(len(runs) for runs in historical_data.values())} total runs)
+
+### Test Performance Over Time
+"""
+
+        for metric in sorted(historical_metrics, key=lambda x: x.avg_score, reverse=True):
+            trend_emoji = {"improving": "📈", "stable": "➡️", "declining": "📉"}[metric.improvement_trend]
+
+            trend_report += f"""
+**{metric.test_id}** {trend_emoji}
+- Average Score: {metric.avg_score:.1f}/5 ({metric.total_runs} runs)
+- Success Rate: {metric.success_rate:.1%}
+- Avg Response: {metric.avg_response_time:.1f}s
+- Stability: σ={metric.score_std_dev:.1f}
+- Trend: {metric.improvement_trend}
+- Last Run: {metric.last_run_date.strftime("%Y-%m-%d %H:%M")}
+"""
+
+        # Add regression analysis
+        regressions = self.detect_regressions(current_results, agent_name)
+        if regressions:
+            trend_report += "\n## 🚨 Potential Regressions\n"
+            for regression in regressions:
+                trend_report += f"- {regression}\n"
+
+        logger.debug(f"Historical report generated with {len(historical_metrics)} metrics")
+        return current_report + trend_report
+
+    def pytest_assert_results_with_history(self, results: List[EvaluationResult], agent_name: str):
+        """Enhanced pytest assertions with historical context."""
+        logger.info(f"Running enhanced pytest assertions with historical context for {agent_name}")
+
+        # Run standard assertions first
+        self.pytest_assert_results(results)
+
+        # Add historical analysis
+        regressions = self.detect_regressions(results, agent_name)
+        if regressions:
+            print("\n🔍 Performance Analysis:")
+            for regression in regressions:
+                print(f"   {regression}")
+
+        # Generate and print enhanced report
+        enhanced_report = self.generate_historical_report(results, agent_name)
+        print(f"\n{enhanced_report}")
+
+        logger.info("Enhanced pytest assertions completed successfully")
