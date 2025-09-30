@@ -179,10 +179,12 @@ class TestExtractTechSupport:
         assert "Extraction failed" in response.error_message
         assert response.files == []
 
-    @patch("sonic_nos_mcp.modules.tech_support.tools.extract_tool.list_files_simple")
+    @patch("sonic_nos_mcp.modules.tech_support.tools.extract_tool.list_files")
     @patch("sonic_nos_mcp.modules.tech_support.tools.extract_tool.extract_file")
     def test_extract_tech_support_success(self, mock_extract_file, mock_list_files, temp_file):
         """Test successful extract_tech_support."""
+        from sonic_nos_mcp.modules.tech_support.models.file_listing_models import FileInfo
+
         # Mock successful extraction
         mock_result = Mock()
         mock_result.success = True
@@ -190,8 +192,12 @@ class TestExtractTechSupport:
         mock_result.extract_dir = "/tmp/extract"
         mock_extract_file.return_value = mock_result
 
-        # Mock file listing
-        mock_list_files.return_value = ["file1.txt", "file2.json", "subdir/file3.log"]
+        # Mock file listing with FileInfo objects
+        mock_list_files.return_value = [
+            FileInfo(path="file1.txt", size=1024),
+            FileInfo(path="file2.json", size=2048),
+            FileInfo(path="subdir/file3.log", size=512),
+        ]
 
         request = ExtractTechSupportRequest(file_path=str(temp_file))
         response = extract_tech_support(request)
@@ -199,12 +205,14 @@ class TestExtractTechSupport:
         assert response.success is True
         assert response.error_message is None
         assert "/tmp/extract" in response.extract_dir or response.extract_dir.endswith("extract")
-        assert response.files == ["file1.txt", "file2.json", "subdir/file3.log"]
+        assert len(response.files) == 3
+        assert response.files[0].path == "file1.txt"
+        assert response.files[0].size == 1024
 
-    @patch("sonic_nos_mcp.modules.tech_support.tools.extract_tool.list_files_simple")
+    @patch("sonic_nos_mcp.modules.tech_support.tools.extract_tool.list_files")
     @patch("sonic_nos_mcp.modules.tech_support.tools.extract_tool.extract_file")
     def test_extract_tech_support_list_files_error(self, mock_extract_file, mock_list_files, temp_file):
-        """Test extract_tech_support when list_files_simple fails."""
+        """Test extract_tech_support when list_files fails."""
         # Mock successful extraction
         mock_result = Mock()
         mock_result.success = True
@@ -212,7 +220,7 @@ class TestExtractTechSupport:
         mock_result.extract_dir = "/tmp/extract"
         mock_extract_file.return_value = mock_result
 
-        # Mock list_files_simple to fail
+        # Mock list_files to fail
         mock_list_files.side_effect = Exception("List files failed")
 
         request = ExtractTechSupportRequest(file_path=str(temp_file))

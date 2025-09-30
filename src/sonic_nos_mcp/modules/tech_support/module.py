@@ -128,7 +128,6 @@ class TechSupportModule(ModuleBase):
                 request = ExtractTechSupportRequest(
                     file_path=file_path,
                     temp_dir=temp_dir,
-                    remove_archives=True,
                 )
                 response = extract_tech_support(request)
 
@@ -189,7 +188,7 @@ class TechSupportModule(ModuleBase):
                     files.append(
                         {
                             "path": file_info.path,
-                            "is_directory": file_info.is_directory,
+                            "size": file_info.size,
                         }
                     )
 

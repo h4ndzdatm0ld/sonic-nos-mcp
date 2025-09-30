@@ -489,6 +489,7 @@ class TestRemoveEmptyFiles:
 
         logger.debug("Running remove_empty_files function")
         from sonic_nos_mcp.modules.tech_support.utils.extraction import remove_empty_files
+
         removed_count = remove_empty_files(temp_dir)
 
         logger.debug(f"Removed {removed_count} empty files")

@@ -18,7 +18,6 @@ from sonic_nos_mcp.modules.tech_support.utils.extraction import (
 )
 from sonic_nos_mcp.modules.tech_support.utils.file_listing import (
     list_files,
-    list_files_simple,
 )
 from sonic_nos_mcp.modules.tech_support.utils.text_chunking import (
     FileProcessor,
@@ -107,14 +106,12 @@ class TestTechSupportIntegration:
         files = list_files(extracted_tech_support)
         assert len(files) > 0, "Should find files in extracted directory"
 
-        # Test that we get both files and directories
-        has_files = any(not f.is_directory for f in files)
-        has_dirs = any(f.is_directory for f in files)
-        assert has_files, "Should find regular files"
-        assert has_dirs, "Should find directories"
+        # Test that we get files (directories are no longer returned)
+        assert all(hasattr(f, "size") for f in files), "All returned items should be files with sizes"
+        assert all(isinstance(f.size, int) for f in files), "All file sizes should be integers"
 
-        # Test simple string listing
-        file_paths = list_files_simple(extracted_tech_support)
+        # Test that we can extract file paths
+        file_paths = [f.path for f in files]
         assert len(file_paths) > 0
         assert all(isinstance(path, str) for path in file_paths)
 
@@ -333,9 +330,9 @@ class TestTechSupportIntegration:
             assert len(json_files) >= 0  # Could be 0 if no JSON files
             assert len(log_files) >= 0  # Could be 0 if no log files
 
-            # Step 4: Analyze content of found files
+            # Step 4: Analyze content of found files (all returned items are files now)
             analyzed_files = 0
-            files_to_analyze = [f for f in all_files if not f.is_directory][:10]  # Try more files
+            files_to_analyze = all_files[:10]  # Try first 10 files
 
             for file_info in files_to_analyze:
                 file_path = result.extract_dir / file_info.path
@@ -358,18 +355,16 @@ class TestTechSupportIntegration:
             assert len(files_to_analyze) > 0, "Should have at least some files to analyze"
             # Note: Don't fail if no files are readable, as tech support content varies
 
-            # Step 5: Search for patterns in text files
+            # Step 5: Search for patterns in text files (all returned items are files now)
             searchable_files = []
             for file_info in all_files:
-                if not file_info.is_directory:
-                    file_path = result.extract_dir / file_info.path
-                    if (
-                        file_path.suffix in [".txt", ".log", ".json", ".conf", ""]
-                        and file_path.stat().st_size < 1024 * 1024
-                    ):  # Under 1MB
-                        searchable_files.append(file_path)
-                        if len(searchable_files) >= 3:
-                            break
+                file_path = result.extract_dir / file_info.path
+                if (
+                    file_path.suffix in [".txt", ".log", ".json", ".conf", ""] and file_info.size < 1024 * 1024
+                ):  # Under 1MB - use size from FileInfo
+                    searchable_files.append(file_path)
+                    if len(searchable_files) >= 3:
+                        break
 
             patterns_found = 0
             for file_path in searchable_files:

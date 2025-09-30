@@ -10,8 +10,9 @@ from sonic_nos_mcp.modules.tech_support.models.extraction_models import (
     ExtractTechSupportRequest,
     ExtractTechSupportResponse,
 )
+from sonic_nos_mcp.modules.tech_support.models.file_listing_models import FileInfo
 from sonic_nos_mcp.modules.tech_support.utils.extraction import extract_file
-from sonic_nos_mcp.modules.tech_support.utils.file_listing import list_files_simple
+from sonic_nos_mcp.modules.tech_support.utils.file_listing import list_files
 
 logger = logging.getLogger(__name__)
 
@@ -80,16 +81,16 @@ def extract_tech_support(
             files=[],
         )
 
-    files: List[str] = []
+    files: List[FileInfo] = []
     try:
-        files = list_files_simple(extract_dir_str)
+        files = list_files(extract_dir_str)
         logger.info(
             "extract_tech_support: extraction complete",
             extra={"context": {**ctx, "extract_dir": extract_dir_str, "file_count": len(files)}},
         )
     except Exception as e:  # pylint: disable=broad-except
         logger.warning(
-            "extract_tech_support: list_files_simple() failed: %s",
+            "extract_tech_support: list_files() failed: %s",
             e,
             extra={"context": {**ctx, "extract_dir": extract_dir_str}},
         )

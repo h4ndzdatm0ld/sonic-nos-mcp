@@ -46,18 +46,20 @@ class TestListTechSupportFiles:
         assert response.error_message is None
         assert len(response.files) > 0
 
-        # Verify file information structure
+        # Verify file information structure - only files, no directories
         file_paths = [f.path for f in response.files]
         assert "file1.txt" in file_paths
         assert "file2.json" in file_paths
-        assert "subdir" in file_paths
         assert "subdir/nested_file.log" in file_paths
+        assert "subdir" not in file_paths  # Directories should not be returned
 
         # Verify FileInfo objects are properly constructed
         for file_info in response.files:
             assert isinstance(file_info, FileInfo)
             assert hasattr(file_info, "path")
-            assert hasattr(file_info, "is_directory")
+            assert hasattr(file_info, "size")
+            assert isinstance(file_info.size, int)
+            assert file_info.size >= 0
 
     def test_list_tech_support_files_with_pattern(self, sample_directory):
         """Test file listing with pattern filter."""
@@ -95,14 +97,14 @@ class TestListTechSupportFiles:
     @patch("sonic_nos_mcp.modules.tech_support.tools.list_tool.list_files")
     def test_list_tech_support_files_underlying_function_success(self, mock_list_files, sample_directory):
         """Test successful delegation to underlying list_files function."""
-        # Mock the underlying list_files function
+        # Mock the underlying list_files function - only return files with sizes
         mock_file_info1 = Mock()
         mock_file_info1.path = "test1.txt"
-        mock_file_info1.is_directory = False
+        mock_file_info1.size = 1024
 
         mock_file_info2 = Mock()
-        mock_file_info2.path = "testdir"
-        mock_file_info2.is_directory = True
+        mock_file_info2.path = "test2.log"
+        mock_file_info2.size = 2048
 
         mock_list_files.return_value = [mock_file_info1, mock_file_info2]
 
@@ -118,11 +120,11 @@ class TestListTechSupportFiles:
         assert response.error_message is None
         assert len(response.files) == 2
 
-        # Verify FileInfo objects are created correctly
+        # Verify FileInfo objects are created correctly with sizes
         assert response.files[0].path == "test1.txt"
-        assert response.files[0].is_directory is False
-        assert response.files[1].path == "testdir"
-        assert response.files[1].is_directory is True
+        assert response.files[0].size == 1024
+        assert response.files[1].path == "test2.log"
+        assert response.files[1].size == 2048
 
     @patch("sonic_nos_mcp.modules.tech_support.tools.list_tool.list_files")
     def test_list_tech_support_files_underlying_function_failure(self, mock_list_files, sample_directory):

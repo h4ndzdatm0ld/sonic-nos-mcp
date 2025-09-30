@@ -8,9 +8,9 @@ from pydantic import BaseModel, Field
 class FileInfo(BaseModel):
     """Information about a file."""
 
-    path: str = Field(..., description="Full path to the file.")
+    path: str = Field(..., description="Relative path to the file.")
 
-    is_directory: bool = Field(..., description="Whether the file is a directory.")
+    size: int = Field(..., description="File size in bytes.")
 
 
 class ListTechSupportFilesRequest(BaseModel):

@@ -2,14 +2,12 @@
 
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 import pytest
 
 from sonic_nos_mcp.modules.tech_support.utils.file_listing import (
     list_files,
-    list_files_simple,
 )
-from sonic_nos_mcp.modules.tech_support.models.file_listing_models import FileInfo
 
 
 class TestListFiles:
@@ -44,23 +42,25 @@ class TestListFiles:
         """Test basic file listing without pattern."""
         files = list_files(sample_directory)
 
-        # Should find all files and directories
+        # Should find all files only (no directories)
         file_paths = [f.path for f in files]
 
         assert "file1.txt" in file_paths
         assert "file2.json" in file_paths
-        assert "subdir1" in file_paths
-        assert "subdir2" in file_paths
         assert "subdir1/file3.log" in file_paths
         assert "subdir2/file4.conf" in file_paths
-        assert "subdir2/nested" in file_paths
         assert "subdir2/nested/file5.txt" in file_paths
 
-        # Verify file vs directory classification
-        files_dict = {f.path: f.is_directory for f in files}
-        assert files_dict["file1.txt"] is False
-        assert files_dict["subdir1"] is True
-        assert files_dict["subdir1/file3.log"] is False
+        # Directories should not be returned
+        assert "subdir1" not in file_paths
+        assert "subdir2" not in file_paths
+        assert "subdir2/nested" not in file_paths
+
+        # Verify all returned items have sizes
+        for file_info in files:
+            assert hasattr(file_info, "size")
+            assert isinstance(file_info.size, int)
+            assert file_info.size >= 0
 
     def test_list_files_with_simple_pattern(self, sample_directory):
         """Test file listing with simple glob pattern."""
@@ -70,7 +70,10 @@ class TestListFiles:
 
         assert "file2.json" in json_paths
         assert "file1.txt" not in json_paths
-        assert len([f for f in json_files if not f.is_directory]) == 1
+        assert len(json_files) == 1  # Only files are returned now
+
+        # Verify file has size
+        assert json_files[0].size > 0
 
     def test_list_files_with_recursive_pattern(self, sample_directory):
         """Test file listing with recursive pattern."""
@@ -84,15 +87,16 @@ class TestListFiles:
 
     def test_list_files_with_directory_pattern(self, sample_directory):
         """Test file listing with directory pattern."""
-        # Test subdir* pattern
+        # Test subdir* pattern - should match files in subdirectories that start with "subdir"
         subdirs = list_files(sample_directory, "subdir*")
         subdir_paths = [f.path for f in subdirs]
 
-        assert "subdir1" in subdir_paths
-        assert "subdir2" in subdir_paths
-        # Verify directories are marked correctly (some might be files in subdirs)
-        subdir_entries = [f for f in subdirs if f.path in ["subdir1", "subdir2"]]
-        assert all(f.is_directory for f in subdir_entries)
+        # Should find files within subdirectories, but not the directories themselves
+        assert "subdir1/file3.log" in subdir_paths
+        assert "subdir2/file4.conf" in subdir_paths
+        # Directories should not be returned
+        assert "subdir1" not in subdir_paths
+        assert "subdir2" not in subdir_paths
 
     def test_list_files_nonexistent_directory(self):
         """Test listing files in non-existent directory."""
@@ -125,57 +129,6 @@ class TestListFiles:
         # Should return partial results despite error
         files = list_files(sample_directory)
         assert len(files) >= 1  # Should have at least some results
-
-
-class TestListFilesSimple:
-    """Test list_files_simple function."""
-
-    @pytest.fixture
-    def sample_directory(self):
-        """Create a sample directory structure."""
-        temp_path = Path(tempfile.mkdtemp(prefix="test_simple_listing_"))
-
-        (temp_path / "file1.txt").write_text("content")
-        (temp_path / "subdir").mkdir()
-        (temp_path / "subdir" / "file2.txt").write_text("content")
-
-        yield temp_path
-
-        import shutil
-
-        if temp_path.exists():
-            shutil.rmtree(temp_path)
-
-    def test_list_files_simple_basic(self, sample_directory):
-        """Test simple file listing."""
-        file_paths = list_files_simple(sample_directory)
-
-        assert isinstance(file_paths, list)
-        assert all(isinstance(path, str) for path in file_paths)
-        assert "file1.txt" in file_paths
-        assert "subdir" in file_paths
-        assert "subdir/file2.txt" in file_paths
-
-    def test_list_files_simple_with_pattern(self, sample_directory):
-        """Test simple file listing with pattern."""
-        txt_files = list_files_simple(sample_directory, "*.txt")
-
-        assert "file1.txt" in txt_files
-        assert "subdir" not in txt_files
-        # Note: subdir/file2.txt might not match *.txt pattern at root level
-
-    @patch("sonic_nos_mcp.modules.tech_support.utils.file_listing.list_files")
-    def test_list_files_simple_delegates_to_list_files(self, mock_list_files, sample_directory):
-        """Test that list_files_simple delegates to list_files."""
-        # Mock return value
-        mock_file_info = Mock(spec=FileInfo)
-        mock_file_info.path = "test.txt"
-        mock_list_files.return_value = [mock_file_info]
-
-        result = list_files_simple(sample_directory, "*.txt")
-
-        mock_list_files.assert_called_once_with(sample_directory, "*.txt")
-        assert result == ["test.txt"]
 
 
 class TestFileListingEdgeCases:

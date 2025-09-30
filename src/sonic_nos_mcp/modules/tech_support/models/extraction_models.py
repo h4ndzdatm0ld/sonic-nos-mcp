@@ -5,6 +5,8 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
+from sonic_nos_mcp.modules.tech_support.models.file_listing_models import FileInfo
+
 
 class ExtractionResult(BaseModel):
     """Result of an extraction operation."""
@@ -83,7 +85,7 @@ class ExtractTechSupportResponse(BaseModel):
 
     error_message: Optional[str] = Field(None, description="Error message if extraction failed.")
 
-    files: List[str] = Field(
+    files: List[FileInfo] = Field(
         default_factory=list,
-        description="List of relative file paths found in the extracted directory.",
+        description="List of file information objects found in the extracted directory.",
     )

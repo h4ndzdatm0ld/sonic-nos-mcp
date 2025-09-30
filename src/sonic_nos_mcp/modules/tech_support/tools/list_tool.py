@@ -17,24 +17,25 @@ def list_tech_support_files(
 ) -> ListTechSupportFilesResponse:
     """List all files in a tech support directory.
 
-        This function scans the specified directory (typically an extracted tech support archive)
-        and returns detailed iError:
-    Error executing tool extract_tech_support_file: 'FileInfo' object has no attribute 'size'nformation about all files found. It can filter files based on
-        a glob pattern to help locate specific files of interest.
+    This function scans the specified directory (typically an extracted tech support archive)
+    and returns detailed information about all files found including their sizes. It can filter
+    files based on a glob pattern to help locate specific files of interest.
 
-        Common important files to look for:
-        - "show_tech_support.log": Main tech support log with device information
-        - "config_db.json": Device configuration database
-        - "syslog": System logs
-        - "docker_ps.log": Container status information
-        - "interfaces/": Directory containing interface statistics
+    Only actual files are returned - directories are skipped.
 
-        Args:
-            request: The listing request containing the directory path and optional pattern filter
+    Common important files to look for:
+    - "show_tech_support.log": Main tech support log with device information
+    - "config_db.json": Device configuration database
+    - "syslog": System logs
+    - "docker_ps.log": Container status information
+    - Various files in subdirectories like dump/, log/, proc/, etc.
 
-        Returns:
-            ListTechSupportFilesResponse: The listing response containing file information,
-                success status, and any error messages
+    Args:
+        request: The listing request containing the directory path and optional pattern filter
+
+    Returns:
+        ListTechSupportFilesResponse: The listing response containing file information with paths,
+            sizes, success status, and any error messages
     """
     logger.info(f"Processing list files request for directory: {request.extract_dir}")
 
@@ -43,12 +44,12 @@ def list_tech_support_files(
 
     try:
         files = list_files(request.extract_dir, request.pattern)
-        logger.info(f"Found {len(files)} files/directories")
+        logger.info(f"Found {len(files)} files")
 
         file_infos = [
             FileInfo(
                 path=file.path,
-                is_directory=file.is_directory,
+                size=file.size,
             )
             for file in files
         ]
