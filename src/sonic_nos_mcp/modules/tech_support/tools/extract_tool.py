@@ -23,17 +23,18 @@ def extract_tech_support(
 
     This function:
       1. Uses pre-validated inputs from Pydantic model validators.
-      2. Delegates archive processing to utils.extraction.extract_file(), which MUST:
+      2. Delegates archive processing to utils.extraction.extract_file(), which automatically:
          - Extract the top-level tarball (e.g., sonic_dump_<host>_<ts>.tar.gz).
          - Recursively inflate nested archives: *.gz, *.tar, *.tar.gz, *.tgz, *.zip.
-         - Optionally remove source archives after extraction if remove_archives=True.
+         - Always remove source archives after extraction.
+         - Remove empty files (0 bytes) to clean up useless files.
+         - Clean up empty directories.
       3. Produces a file listing for downstream tools (LLM navigation, indexing).
 
     Args:
         request: Extraction request containing already-validated fields:
             - file_path: validated path to the tech-support tarball (normalized absolute path)
             - temp_dir: optional extraction root (validated if provided, created if missing)
-            - remove_archives: optionally delete archives after extraction
 
     Returns:
         ExtractTechSupportResponse: with fields
@@ -49,7 +50,6 @@ def extract_tech_support(
     ctx: Dict[str, Any] = {
         "file_path": request.file_path,
         "temp_dir": request.temp_dir,
-        "remove_archives": bool(request.remove_archives),
     }
     logger.info("extract_tech_support: starting extraction", extra={"context": ctx})
 
@@ -57,7 +57,6 @@ def extract_tech_support(
         result = extract_file(
             request.file_path,
             request.temp_dir,
-            remove_archives=request.remove_archives,
         )
     except Exception as e:  # pylint: disable=broad-except
         logger.exception("extract_tech_support: extract_file() raised an exception", extra={"context": ctx})
@@ -68,9 +67,8 @@ def extract_tech_support(
             files=[],
         )
 
-    # Build response
-    extract_dir_str = str(Path(result.extract_dir).resolve()) if getattr(result, "extract_dir", None) else ""
-    if not getattr(result, "success", False):
+    extract_dir_str = str(Path(result.extract_dir).resolve()) if result.extract_dir else ""
+    if not result.success:
         logger.error(
             "extract_tech_support: extraction reported failure",
             extra={"context": {**ctx, "extract_dir": extract_dir_str, "error": result.error_message}},

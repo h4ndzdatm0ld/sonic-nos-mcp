@@ -138,15 +138,12 @@ Installation:
         help="Set logging level (default: ERROR)",
     )
 
-    # Parse arguments - this handles --help and --version automatically
     args = parser.parse_args()
 
-    # Configure logging based on parsed arguments
     logging.basicConfig(
         level=getattr(logging, args.log_level), format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
-    # Only NOW initialize the server (after argument parsing is complete)
     try:
         logger.info("Starting SONiC NOS MCP Server with transport: %s", args.transport)
         server = SonicNosMcpServer()

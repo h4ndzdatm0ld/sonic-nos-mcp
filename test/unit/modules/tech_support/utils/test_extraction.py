@@ -1,10 +1,12 @@
 """Unit tests for extraction utilities."""
 
 import gzip
+import logging
 import shutil
 import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
+
 import pytest
 
 from sonic_nos_mcp.modules.tech_support.utils.extraction import (
@@ -15,6 +17,8 @@ from sonic_nos_mcp.modules.tech_support.utils.extraction import (
     cleanup_extraction,
     is_archive_file,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TestIsArchiveFile:
@@ -127,8 +131,8 @@ class TestExtractFile:
             if Path(result.extract_dir).exists():
                 shutil.rmtree(result.extract_dir)
 
-    def test_extract_with_remove_archives(self, temp_dir):
-        """Test extraction with remove_archives=True."""
+    def test_extract_with_automatic_cleanup(self, temp_dir):
+        """Test extraction with automatic archive and empty file cleanup."""
         # Create archive with nested .gz files
         main_dir = temp_dir / "main"
         main_dir.mkdir()
@@ -147,7 +151,7 @@ class TestExtractFile:
             tar.add(main_dir, arcname="main")
 
         extract_dir = temp_dir / "extract"
-        result = extract_file(archive_path, extract_dir, remove_archives=True)
+        result = extract_file(archive_path, extract_dir)
 
         assert result.success is True
 
@@ -460,6 +464,71 @@ class TestExtractFileErrorCases:
 
         assert result.success is False
         assert "Extraction failed" in result.error_message
+
+
+class TestRemoveEmptyFiles:
+    """Test cases for remove_empty_files function."""
+
+    def test_remove_empty_files_basic(self, temp_dir):
+        """Test basic empty file removal."""
+        logger.debug(f"Creating test files in directory: {temp_dir}")
+        empty_file1 = temp_dir / "empty1.txt"
+        empty_file2 = temp_dir / "empty2.log"
+        non_empty_file = temp_dir / "content.txt"
+
+        logger.debug("Creating empty files for testing")
+        empty_file1.touch()
+        empty_file2.touch()
+
+        logger.debug("Creating non-empty file for testing")
+        non_empty_file.write_text("This file has content")
+
+        assert empty_file1.stat().st_size == 0
+        assert empty_file2.stat().st_size == 0
+        assert non_empty_file.stat().st_size > 0
+
+        logger.debug("Running remove_empty_files function")
+        from sonic_nos_mcp.modules.tech_support.utils.extraction import remove_empty_files
+        removed_count = remove_empty_files(temp_dir)
+
+        logger.debug(f"Removed {removed_count} empty files")
+        assert removed_count == 2
+
+        logger.debug("Verifying empty files were removed and non-empty file remains")
+        assert not empty_file1.exists()
+        assert not empty_file2.exists()
+        assert non_empty_file.exists()
+        assert non_empty_file.read_text() == "This file has content"
+
+    def test_remove_empty_files_nested_directories(self, temp_dir):
+        """Test empty file removal in nested directory structure."""
+        from sonic_nos_mcp.modules.tech_support.utils.extraction import remove_empty_files
+
+        logger.debug("Creating nested directory structure")
+        subdir1 = temp_dir / "dir1" / "subdir1"
+        subdir2 = temp_dir / "dir2"
+        subdir1.mkdir(parents=True)
+        subdir2.mkdir()
+
+        logger.debug("Creating empty files in nested directories")
+        empty_root = temp_dir / "empty_root.txt"
+        empty_sub1 = subdir1 / "empty_nested.log"
+        empty_sub2 = subdir2 / "empty_dir2.json"
+        non_empty_root = temp_dir / "content_root.txt"
+
+        empty_root.touch()
+        empty_sub1.touch()
+        empty_sub2.touch()
+        non_empty_root.write_text("Root content")
+
+        logger.debug("Running remove_empty_files on nested structure")
+        removed_count = remove_empty_files(temp_dir)
+
+        assert removed_count == 3
+        assert not empty_root.exists()
+        assert not empty_sub1.exists()
+        assert not empty_sub2.exists()
+        assert non_empty_root.exists()
 
 
 if __name__ == "__main__":

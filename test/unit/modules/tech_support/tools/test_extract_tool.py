@@ -240,21 +240,20 @@ class TestExtractTechSupport:
 
                 extract_tech_support(request)
 
-                # Should pass temp_dir to extract_file (default remove_archives from request)
+                # Should pass temp_dir to extract_file (automatic cleanup enabled)
                 call_args = mock_extract.call_args
                 # Compare normalized paths since Pydantic validators resolve symlinks
                 assert call_args[0][0] == str(Path(temp_file).resolve())
                 assert call_args[0][1] == str(Path(temp_dir).resolve())
-                # remove_archives comes from request (default False)
         finally:
             import shutil
 
             if temp_dir.exists():
                 shutil.rmtree(temp_dir)
 
-    def test_extract_tech_support_with_remove_archives(self, temp_file):
-        """Test extract_tech_support with remove_archives=True."""
-        request = ExtractTechSupportRequest(file_path=str(temp_file), remove_archives=True)
+    def test_extract_tech_support_with_simplified_api(self, temp_file):
+        """Test extract_tech_support with simplified API (automatic cleanup)."""
+        request = ExtractTechSupportRequest(file_path=str(temp_file))
 
         with patch("sonic_nos_mcp.modules.tech_support.tools.extract_tool.extract_file") as mock_extract:
             mock_result = Mock()
@@ -265,10 +264,10 @@ class TestExtractTechSupport:
 
             extract_tech_support(request)
 
-            # Should pass remove_archives=True to extract_file
+            # Should pass only file_path and temp_dir (automatic cleanup)
             # Compare normalized paths since Pydantic validators resolve symlinks
             expected_file_path = str(Path(temp_file).resolve())
-            mock_extract.assert_called_once_with(expected_file_path, None, remove_archives=True)
+            mock_extract.assert_called_once_with(expected_file_path, None)
 
 
 if __name__ == "__main__":

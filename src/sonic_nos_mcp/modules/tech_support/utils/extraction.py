@@ -29,14 +29,12 @@ def is_archive_file(file_path: Path) -> bool:
 def extract_file(
     file_path: Union[str, Path],
     temp_dir: Optional[Union[str, Path]] = None,
-    remove_archives: bool = False,
 ) -> ExtractionResult:
     """Extract a tech support file to a temporary directory.
 
     Args:
         file_path: Path to the tech support file to extract
         temp_dir: Optional path to temporary directory. If not provided, a system temp directory will be used.
-        remove_archives: Whether to remove archive files after extraction
 
     Returns:
         ExtractionResult: Result of the extraction operation
@@ -122,14 +120,18 @@ def extract_file(
     logger.debug("Processing any nested gzip files recursively")
     extract_all_gz_files(extract_dir)
 
-    logger.debug(f"Remove archives flag set to: {remove_archives}")
-    if remove_archives:
-        delete_all_gz_files(extract_dir)
+    logger.debug("Always removing archive files after extraction")
+    delete_all_gz_files(extract_dir)
 
-        logger.debug("Cleaning up empty directories after archive removal")
-        removed_dirs = remove_empty_directories(extract_dir)
-        if removed_dirs > 0:
-            logger.info(f"Removed {removed_dirs} empty directories")
+    logger.debug("Removing empty files from extracted directory")
+    removed_empty_files = remove_empty_files(extract_dir)
+    if removed_empty_files > 0:
+        logger.info(f"Removed {removed_empty_files} empty files")
+
+    logger.debug("Cleaning up empty directories after cleanup")
+    removed_dirs = remove_empty_directories(extract_dir)
+    if removed_dirs > 0:
+        logger.info(f"Removed {removed_dirs} empty directories")
 
     return ExtractionResult(
         extract_dir=extract_dir,
@@ -159,7 +161,7 @@ def extract_all_gz_files(extract_dir: Path) -> int:
         if str(gz_file).lower().endswith(".tar.gz"):
             continue
 
-        output_file = gz_file.with_suffix("")  # Remove .gz extension
+        output_file = gz_file.with_suffix("")
 
         logger.info(f"Unzipping {gz_file} to {output_file}")
         try:
@@ -218,6 +220,40 @@ def delete_all_gz_files(extract_dir: Path) -> int:
 
     logger.info(f"Deleted {deleted_count} .gz files")
     return deleted_count
+
+
+def remove_empty_files(directory: Union[str, Path]) -> int:
+    """Remove all empty files (0 bytes) recursively from directory.
+
+    Args:
+        directory: Directory to scan for empty files
+
+    Returns:
+        int: Number of empty files removed
+    """
+    directory = Path(directory)
+    if not directory.exists() or not directory.is_dir():
+        logger.warning(f"Directory does not exist or is not a directory: {directory}")
+        return 0
+
+    removed_count = 0
+    logger.debug(f"Scanning for empty files in directory: {directory}")
+
+    for file_path in directory.rglob("*"):
+        if not file_path.is_file():
+            continue
+
+        try:
+            if file_path.stat().st_size == 0:
+                logger.debug(f"Found empty file (0 bytes): {file_path}")
+                file_path.unlink()
+                removed_count += 1
+                logger.debug(f"Removed empty file: {file_path}")
+        except Exception as e:
+            logger.warning(f"Failed to process file {file_path}: {e}")
+
+    logger.info(f"Removed {removed_count} empty files from {directory}")
+    return removed_count
 
 
 def remove_empty_directories(directory: Union[str, Path], remove_root: bool = False) -> int:

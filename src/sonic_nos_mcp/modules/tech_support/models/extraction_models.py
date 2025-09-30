@@ -31,11 +31,6 @@ class ExtractTechSupportRequest(BaseModel):
         description="Optional path to temporary directory. If not provided, a system temp directory will be used.",
     )
 
-    remove_archives: bool = Field(
-        True,
-        description="Whether to remove archive files after extraction.",
-    )
-
     @field_validator("file_path")
     @classmethod
     def validate_file_path(cls, v: str) -> str:

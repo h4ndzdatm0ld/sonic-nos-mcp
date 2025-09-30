@@ -177,12 +177,12 @@ class TestComprehensiveExtraction:
             cleanup_extraction(temp_dir)
 
     def test_complete_removal_of_compressed_files(self, real_tech_support_file):
-        """Test complete removal of .gz files when remove_archives=True."""
+        """Test complete removal of .gz files with automatic cleanup."""
         temp_dir = Path(tempfile.mkdtemp(prefix="test_complete_removal_"))
 
         try:
-            # Extract with archive removal enabled
-            result = extract_file(real_tech_support_file, temp_dir, remove_archives=True)
+            # Extract with automatic archive removal
+            result = extract_file(real_tech_support_file, temp_dir)
             assert result.success is True
 
             # Find any remaining .gz files
@@ -198,9 +198,9 @@ class TestComprehensiveExtraction:
             if remaining_gz_files:
                 print("Remaining files:", [str(f) for f in remaining_gz_files[:5]])
 
-            # With remove_archives=True, NO .gz files should remain
+            # With automatic cleanup, NO .gz files should remain
             assert len(remaining_gz_files) == 0, (
-                f"Found {len(remaining_gz_files)} remaining .gz files after remove_archives=True!"
+                f"Found {len(remaining_gz_files)} remaining .gz files after automatic cleanup!"
             )
 
         finally:
